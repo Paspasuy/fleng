@@ -2,7 +2,7 @@ CC = c++
 CFLAGS = --std=c++20 -Wall -Wextra -pedantic -Wformat=2 -Wfloat-equal -Wlogical-op -Wshift-overflow=2 -Wduplicated-cond -Wcast-qual -Wcast-align 
 LIBS=-lsfml-graphics -lsfml-window -lsfml-system
 
-SRCS = fleng.cpp
+SRCS = src/fleng.cpp
 OBJS = $(SRCS:.cpp=.o)
 EXE  = fleng
 
@@ -16,9 +16,9 @@ RELEXE = $(RELDIR)/$(EXE)
 RELOBJS = $(addprefix $(RELDIR)/, $(OBJS))
 RELCFLAGS = -O3
 
-.PHONY: all clean debug prep release remake run
+.PHONY: all clean debug prepare release remake run
 
-all: prep release run
+all: release run
 
 debug: $(DBGEXE)
 
@@ -39,8 +39,11 @@ $(RELDIR)/%.o: %.cpp
 run:
 	$(RELEXE)
 
-prep:
+prepare:
 	@mkdir -p $(DBGDIR) $(RELDIR)
+	@mkdir -p $(DBGDIR)/src $(RELDIR)/src
+	#@ln -sf ../../shaders/ $(DBGDIR)
+	#@ln -sf ../../shaders/ $(RELDIR)
 
 remake: clean all
 

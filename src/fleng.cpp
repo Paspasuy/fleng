@@ -133,7 +133,7 @@ struct Camera {
         camor = mul(camor, get_rot(0, 1, phi));
     }
 };
-
+#include <unistd.h>
 signed main()
 {
     // sf::Glsl::Mat4 *mtx;// = new sf::Glsl::Mat4[2];
@@ -143,7 +143,11 @@ signed main()
     // rect.setPosition(100, 100);
     rect.setFillColor(sf::Color::Green);
     sf::Shader shader;
-    if (!shader.loadFromFile("fleng.frag", sf::Shader::Fragment))
+    
+    char dir[1024];
+    getcwd( dir, sizeof( dir ) );
+    printf( "CWD = %s", dir );
+    if (!shader.loadFromFile("shaders/fleng.frag", sf::Shader::Fragment))
     {
         std::cerr << "YOU SUCKED(\n";
         return -1;
