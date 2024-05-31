@@ -1,5 +1,8 @@
 #include <SFML/Graphics.hpp>
 #include "bits/stdc++.h"
+
+#include "math.hpp"
+
 // #include <GL/glew.h>
 typedef long double ld;
 
@@ -9,45 +12,6 @@ using pii = std::pair<int,int>;
 // const int H = 50, W = 50;
 const int H = 800, W = 800;
 // const int H = 1920, W = 1920;
-
-struct vec2 {
-    float x, y;
-    vec2(float _x, float _y) {x = _x; y = _y;}
-    vec2() {}
-};
-
-vec2 rot(vec2 v, float alpha) {
-    vec2 res;
-    res.x = v.x * cos(alpha) - v.y * sin(alpha);
-    res.y = v.y * cos(alpha) + v.x * sin(alpha);
-    return res;
-}
-
-struct vec3 {
-    float x, y, z;
-    vec3(float _x, float _y, float _z) {x = _x; y = _y; z = _z;}
-    vec3() {}
-    vec3 operator+(vec3 p) {return vec3(x+p.x, y+p.y, z+p.z);}
-    void operator+=(vec3 p) {x+=p.x; y+=p.y; z+=p.z;}
-    void operator-=(vec3 p) {x-=p.x; y-=p.y; z-=p.z;}
-    vec3 operator-(vec3 p) {return vec3(x-p.x, y-p.y, z-p.z);}
-    vec3 operator*(float p) {return vec3(x * p, y * p, z * p);}
-    float operator*(vec3 p) {return x*p.x + y*p.y + z*p.z;}
-    float sz() {return sqrt(x * x + y * y + z * z);}
-    vec3 norm() {float l = sz(); return vec3(x / l, y / l, z / l);};
-    void rot_xz(float alpha) {vec2 susik = rot(vec2(x, z), alpha); x = susik.x; z = susik.y;}
-    void rot_yz(float alpha) {vec2 susik = rot(vec2(y, z), alpha); y = susik.x; z = susik.y;}
-    void rot_xy(float alpha) {vec2 susik = rot(vec2(x, y), alpha); x = susik.x; y = susik.y;}
-    sf::Glsl::Vec3 to_glsl() {
-        return sf::Glsl::Vec3(x, y, z);
-    }
-};
-
-struct vec4 {
-    float x, y, z, w;
-    vec4(float _x, float _y, float _z, float _w) {x = _x; y = _y; z = _z; w = _w;}
-    vec4() {}
-};
 
 struct Sph {
     vec3 pos;
@@ -65,43 +29,6 @@ struct Pln {
     Pln(vec3 _pos, vec4 _color, vec3 _norm) {pos = _pos; color = _color; norm = _norm;}
 };
 
-struct M3x3 {
-    float a[3][3];
-    M3x3() {a[0][0] = a[1][1] = a[2][2] = 1; a[0][1] = a[1][0] = a[2][0] = a[0][2] = a[1][2] = a[2][1] = 0;}
-    vec3 get_x() {return vec3(a[0][0], a[1][0], a[2][0]);}
-    vec3 get_y() {return vec3(a[0][1], a[1][1], a[2][1]);}
-    vec3 get_z() {return vec3(a[0][2], a[1][2], a[2][2]);}
-};
-
-M3x3 mul(M3x3 m1, M3x3 m2) {
-    M3x3 ans;
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            ans.a[i][j] = 0;
-            for (int k = 0; k < 3; ++k) {
-                ans.a[i][j] += m1.a[i][k] * m2.a[k][j];
-            }
-        }
-    }
-    return ans;
-}
-
-vec3 mul(M3x3 &m, vec3 &v) {
-    vec3 ans;
-    ans.x = m.a[0][0] * v.x + m.a[0][1] * v.y + m.a[0][2] * v.z;
-    ans.y = m.a[1][0] * v.x + m.a[1][1] * v.y + m.a[1][2] * v.z;
-    ans.z = m.a[2][0] * v.x + m.a[2][1] * v.y + m.a[2][2] * v.z;
-    return ans;
-}
-
-M3x3 get_rot(int a1, int a2, float phi) {
-    M3x3 ans;
-    ans.a[a1][a1] = cos(phi);
-    ans.a[a1][a2] = sin(phi);
-    ans.a[a2][a1] = -sin(phi);
-    ans.a[a2][a2] = cos(phi);
-    return ans;//.norm();
-}
 
 struct Camera {
     float mt_sz = 0.001;
@@ -161,7 +88,7 @@ signed main()
     int t = 0;
     std::vector<Sph> sph;
     std::vector<Pln> pln;
-    // sph.emplace_back(Sph(vec3(0, 0, 0), vec4(1.0, 1.0, 1., 1.), vec4(0.2, 0., 0., 0.)));
+    sph.emplace_back(Sph(vec3(0, 0, 0), vec4(1.0, 1.0, 1., 1.), vec4(0.2, 0., 0., 0.)));
     // sph.emplace_back(Sph(vec3(1, 0, 0), vec4(1.0, 0.0, 0., 1.), vec4(0.2, 0., 0., 0.)));
     // sph.emplace_back(Sph(vec3(0, 1, 0), vec4(0.0, 1.0, 0., 1.), vec4(0.2, 0., 0., 0.)));
     // sph.emplace_back(Sph(vec3(0, 0, 1), vec4(0.0, 0.0, 1., 1.), vec4(0.2, 0., 0., 0.)));

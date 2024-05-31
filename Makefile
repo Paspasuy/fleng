@@ -2,7 +2,8 @@ CC = c++
 CFLAGS = --std=c++20 -Wall -Wextra -pedantic -Wformat=2 -Wfloat-equal -Wlogical-op -Wshift-overflow=2 -Wduplicated-cond -Wcast-qual -Wcast-align 
 LIBS=-lsfml-graphics -lsfml-window -lsfml-system
 
-SRCS = src/fleng.cpp
+SRCS = src/fleng.cpp src/math.cpp
+HEADERS = src/math.hpp
 OBJS = $(SRCS:.cpp=.o)
 EXE  = fleng
 
@@ -25,7 +26,7 @@ debug: $(DBGEXE)
 $(DBGEXE): $(DBGOBJS)
 	$(CC) $(CFLAGS) $(DBGCFLAGS) $(LIBS) -o $(DBGEXE) $^
 
-$(DBGDIR)/%.o: %.cpp
+$(DBGDIR)/%.o: %.cpp $(HEADERS)
 	$(CC) -c $(CFLAGS) $(DBGCFLAGS) -o $@ $<
 
 release: $(RELEXE)
@@ -33,7 +34,7 @@ release: $(RELEXE)
 $(RELEXE): $(RELOBJS)
 	$(CC) $(CFLAGS) $(RELCFLAGS) $(LIBS) -o $(RELEXE) $^
 
-$(RELDIR)/%.o: %.cpp
+$(RELDIR)/%.o: %.cpp $(HEADERS)
 	$(CC) -c $(CFLAGS) $(RELCFLAGS) -o $@ $<
 
 run:
