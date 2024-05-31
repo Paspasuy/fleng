@@ -3,7 +3,8 @@ CFLAGS = --std=c++20 -Wall -Wextra -pedantic -Wformat=2 -Wfloat-equal -Wlogical-
 LIBS=-lsfml-graphics -lsfml-window -lsfml-system
 
 SRCS = src/fleng.cpp src/math.cpp
-HEADERS = src/math.hpp src/utils/constants.hpp src/camera.hpp
+HEADERS = src/math.hpp src/utils/constants.hpp src/camera.hpp src/objects/RenderObject.hpp src/objects/Sphere.hpp src/objects/Plane.hpp src/objects/objects.hpp
+
 OBJS = $(SRCS:.cpp=.o)
 EXE  = fleng
 
@@ -46,6 +47,9 @@ prepare:
 	@mkdir -p $(DBGDIR)/src/utils $(RELDIR)/src/utils
 	#@ln -sf ../../shaders/ $(DBGDIR)
 	#@ln -sf ../../shaders/ $(RELDIR)
+
+pretty:
+	find src/ -iname '*.hpp' -o -iname '*.cpp' | xargs clang-format -i
 
 remake: clean all
 
