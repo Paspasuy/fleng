@@ -29,14 +29,14 @@ signed main() {
   renderTexture.display();
   sf::Sprite sprite(renderTexture.getTexture());
   int t = 0;
-  std::vector<Sphere> sph;
-  std::vector<Plane> pln;
-  sph.emplace_back(Sphere(vec3(0, 0, 0), vec4(1.0, 1.0, 1., 1.), vec4(0.2, 0., 0., 0.)));
+  std::vector<RenderObject*> obj;
+  obj.push_back(new Sphere(vec3(0, 0, 0), vec4(1.0, 1.0, 1., 1.), vec4(0.2, 0., 0., 0.)));
   // sph.emplace_back(Sph(vec3(1, 0, 0), vec4(1.0, 0.0, 0., 1.), vec4(0.2, 0.,
   // 0., 0.))); sph.emplace_back(Sph(vec3(0, 1, 0), vec4(0.0, 1.0, 0., 1.),
   // vec4(0.2, 0., 0., 0.))); sph.emplace_back(Sph(vec3(0, 0, 1), vec4(0.0,
   // 0.0, 1., 1.), vec4(0.2, 0., 0., 0.)));
-  pln.emplace_back(Plane(vec3(0, -1, 0), vec4(1.0, 0.3, 1., 1.), vec3(0, 1, 0)));
+  obj.push_back(new Plane(vec3(0, -1, 0), vec4(1.0, 0.3, 1., 1.), vec3(0, 1, 0)));
+  obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
   Camera cam;
   // sf::Clock cl;
 
@@ -94,16 +94,8 @@ signed main() {
             }*/
 
     std::vector<sf::Glsl::Mat4> mtx;
-    for (size_t i = 0; i < sph.size(); ++i) {
-      mtx.emplace_back(sf::Glsl::Mat4(sph[i].exportData().data()));
-    }
-    for (size_t i = 0; i < pln.size(); ++i) {
-      mtx.emplace_back(sf::Glsl::Mat4(sph[i].exportData().data()));
-    }
-    // Fractal
-    {
-      float array[16] = {0, 0, 0, 0, 0.0, 1.0, 0.5, 1.0, 102, 2.0, 50, 0.5, 0, 0, 0, 0};
-      mtx.emplace_back(sf::Glsl::Mat4(array));
+    for (RenderObject* object : obj) {
+      mtx.emplace_back(sf::Glsl::Mat4(object->exportData().data()));
     }
     // sf::Time elapsed = cl.restart();
     // std::cerr << elapsed.asSeconds() * 60 << '\n';
@@ -126,6 +118,9 @@ signed main() {
     window.clear(sf::Color::Black);
     window.draw(sprite, &shader);
     window.display();
+  }
+  for (RenderObject* object : obj) {
+    delete object;
   }
   return 0;
 }

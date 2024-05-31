@@ -18,7 +18,7 @@ class Sphere : public RenderObject {
   }
 
   std::array<float, 16> exportData() override {
-    return {pos.x, pos.y, pos.z, 0, color.x, color.y, color.z, color.w, 0, prop.x, 0, 0, 0, 0, 0, 0};
+    return {pos.x, pos.y, pos.z, 0, color.x, color.y, color.z, color.w, ObjectType::SPHERE, prop.x, 0, 0, 0, 0, 0, 0};
   }
   ~Sphere() = default;
 };

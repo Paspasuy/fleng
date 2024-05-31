@@ -18,7 +18,8 @@ class Plane : public RenderObject {
   }
 
   std::array<float, 16> exportData() override {
-    return {pos.x, pos.y, pos.z, 0, color.x, color.y, color.z, color.w, 1, norm.x, norm.y, norm.z, 0, 0, 0, 0};
+    return {pos.x,  pos.y,  pos.z,  0, color.x, color.y, color.z, color.w, ObjectType::PLANE,
+            norm.x, norm.y, norm.z, 0, 0,       0,       0};
   }
-  ~Plane() = default; // TODO: override?
+  ~Plane() = default;  // TODO: override?
 };
