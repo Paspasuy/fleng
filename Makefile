@@ -43,6 +43,7 @@ run:
 prepare:
 	@mkdir -p $(DBGDIR) $(RELDIR)
 	@mkdir -p $(DBGDIR)/src $(RELDIR)/src
+	@mkdir -p $(DBGDIR)/src/utils $(RELDIR)/src/utils
 	#@ln -sf ../../shaders/ $(DBGDIR)
 	#@ln -sf ../../shaders/ $(RELDIR)
 

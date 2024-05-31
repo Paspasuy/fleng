@@ -2,16 +2,9 @@
 #include "bits/stdc++.h"
 
 #include "math.hpp"
+#include "utils/constants.hpp"
 
 // #include <GL/glew.h>
-typedef long double ld;
-
-using pld = std::pair<ld,ld>;
-using pii = std::pair<int,int>;
-
-// const int H = 50, W = 50;
-const int H = 800, W = 800;
-// const int H = 1920, W = 1920;
 
 struct Sph {
     vec3 pos;
@@ -31,9 +24,9 @@ struct Pln {
 
 
 struct Camera {
-    float mt_sz = 0.001;
-    float speed = 0.2;
-    const float rot_ang = 0.05;
+    float mt_sz = CAM_MATRIX_SIZE;
+    float speed = CAM_INIT_SPEED;
+    const float rot_ang = CAM_ROT_ANGLE;
     vec3 campos;
     M3x3 camor;
     // Camera() {campos = vec3(1.0, 1.0, 0.0); xaxis = vec3(1, 0, 0).norm(); camdir = vec3(0, 0, 3).norm();}
@@ -60,27 +53,25 @@ struct Camera {
         camor = mul(camor, get_rot(0, 1, phi));
     }
 };
-#include <unistd.h>
+
 signed main()
 {
     // sf::Glsl::Mat4 *mtx;// = new sf::Glsl::Mat4[2];
-    sf::RenderWindow window(sf::VideoMode(W, H), "fleng");//, sf::Style::Fullscreen);
-    window.setFramerateLimit(60);
-    sf::RectangleShape rect(sf::Vector2f(W, H));
+    sf::RenderWindow window(sf::VideoMode(VIEWPORT_WIDTH, VIEWPORT_HEIGHT), APP_TITLE);//, sf::Style::Fullscreen);
+    window.setFramerateLimit(FRAMERATE_LIMIT);
+    sf::RectangleShape rect(sf::Vector2f(VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
     // rect.setPosition(100, 100);
     rect.setFillColor(sf::Color::Green);
     sf::Shader shader;
+    const std::string shader_path = SHADERS_DIR + std::string("fleng.frag");
     
-    char dir[1024];
-    getcwd( dir, sizeof( dir ) );
-    printf( "CWD = %s", dir );
-    if (!shader.loadFromFile("shaders/fleng.frag", sf::Shader::Fragment))
+    if (!shader.loadFromFile(shader_path, sf::Shader::Fragment))
     {
         std::cerr << "YOU SUCKED(\n";
         return -1;
     }
     sf::RenderTexture renderTexture;
-    renderTexture.create(W, H);
+    renderTexture.create(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
     renderTexture.clear();
     renderTexture.draw(rect);
     renderTexture.display();
@@ -96,7 +87,7 @@ signed main()
     Camera cam;
     // sf::Clock cl;
 
-    int MARCH = 200;
+    int MARCH = INITIAL_MARCH_ITERATIONS;
 
     int v = 1;
     bool paused = 0;
