@@ -1,4 +1,5 @@
 uniform mat4 objects[50];
+uniform float time;
 uniform float mt_sz;
 uniform vec3 cam_pos, cam_dir, xaxis;
 uniform int obj_cnt;
@@ -16,7 +17,7 @@ float sphere_dist(vec3 pos, int i) {
 }
 
 float plane_dist(vec3 pos, int i) {
-  return dot(pos - objects[i][0].xyz, objects[i][2].yzw);
+  return dot(pos - objects[i][0].xyz, normalize(objects[i][2].yzw));
 }
 
 float serp_dist(vec3 pos, int i)
@@ -154,7 +155,6 @@ const float mt_dist = 0.001;
 const float INF = 1000.;
 const float EPS = 0.00001;
 uniform int MARCH;
-const int SUN_MARCH = 100;
 
 const int REFLECT_COUNT = 4;
 
@@ -164,16 +164,38 @@ float smin(float a, float b, float k) {
 }
 
 vec4 gamma(vec4 color) {
-  color.x = pow(color.x, 0.45);
-  color.y = pow(color.y, 0.45);
-  color.z = pow(color.z, 0.45);
+//  if (mod(time, 1.) < .5) {
+    color.x = pow(color.x, 0.45);
+    color.y = pow(color.y, 0.45);
+    color.z = pow(color.z, 0.45);
+/*  } else {
+    // gamma correction
+    color = max( vec3(0), color - 0.004);
+    color = (color*(6.2*color + .5)) / (color*(6.2*color+1.7) + 0.06);
+  }
+*/
   return color;
+
 }
+
 
 vec4 get_sky(vec3 ray_dir) {
   vec4 sun = vec4(0.95, 0.9, 1.0, 1.);
   sun *= max(0., pow(dot(-light_dir, ray_dir), 128.));
   return clamp(sun + sky, 0., 1.);
+}
+
+vec4 get_floor(vec3 ray_pos, vec3 ray_dir) {
+  return objects[0][1];
+}
+
+// Heavily rely that objects[0] is floor
+vec4 get_surround(vec3 ray_pos, vec3 ray_dir) {
+  vec4 result = get_sky(ray_dir);
+  if (ray_dir.y < 0.) {
+    result *= get_floor(ray_pos, ray_dir);
+  }
+  return result;
 }
 
 
@@ -212,22 +234,31 @@ void main()
 
     // Ray points to the sky
     if (lastd >= INF) {
-      gl_FragColor = gamma(get_sky(ray_dir)) * ray_color * AO;
+      gl_FragColor = gamma(get_sky(ray_dir) * ray_color * AO);
       return;
+    }
+
+    // Do not reflect further if hit fractal
+    if (objects[idx][2].x >= 100.) {
+      ray_color *= objects[idx][1];
+      AO = pow(1. - float(citer) / float(MARCH), 2.);
+      gl_FragColor = gamma(ray_color * AO);
+      return;
+    }
+
+    // Failed approaching to any object
+    if (citer == MARCH) {
+      AO = 1.;
+      break;
     }
 
     // Object reflects ray
     ray_color *= objects[idx][1];
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
     ray_pos += ray_dir * abs(EPS) * 2.;
-
-    // Do not reflect further if hit fractal
-    if (objects[idx][2].x >= 100) {
-      AO = pow(1. - float(citer) / float(MARCH), 2.);
-      break;
-    }
+    
   }
-  gl_FragColor = ray_color * AO;
+  gl_FragColor = gamma(get_surround(ray_pos, ray_dir) * ray_color * AO);
   return;
 }
 

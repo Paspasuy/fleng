@@ -31,16 +31,20 @@ signed main() {
   int t = 0;
 
   std::vector<RenderObject*> obj;
-  obj.push_back(new Sphere(vec3(2, 2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
-  obj.push_back(new Sphere(vec3(0, 2, 1), vec4(0.5, 0.7, 1., 1.), 0.7));
-  obj.push_back(new Sphere(vec3(2, 2, 2), vec4(0.4, 1.0, 0.6, 1.), 0.7));
+  // Shader uses that first object is floor
   obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.5, 0.3, 0.2, 1.), vec3(0, 1, 0)));
+
+  obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
+  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 1.), 0.7));
+  obj.push_back(new Sphere(vec3(2, 2, 2), vec4(0.4, 1.0, 0.6, 1.), 0.7));
+  obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(1.0, 1.0, 1.0, 0.9), 0.3));
 
   // obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
   // obj.push_back(new SerpinskyTetrahedron(vec4(1.0, 0.7, 0.0, 1.)));
    obj.push_back(new MandelBulb(vec4(0.9, 0.2, 0.2, 1.)));
   Camera cam;
-  // sf::Clock cl;
+  
+  sf::Clock cl;
 
   int MARCH = INITIAL_MARCH_ITERATIONS;
 
@@ -99,14 +103,15 @@ signed main() {
     for (RenderObject* object : obj) {
       mtx.emplace_back(sf::Glsl::Mat4(object->exportData().data()));
     }
-    // sf::Time elapsed = cl.restart();
-    // std::cerr << elapsed.asSeconds() * 60 << '\n';
+    sf::Time elapsed = cl.getElapsedTime();
+    float time = elapsed.asSeconds();
     // std::cerr << CLOCKS_PER_SEC << '\n';
-    // float alpha = float(clock())/CLOCKS_PER_SEC*1000;
+    // float time = float(clock())/CLOCKS_PER_SEC;
+    shader.setUniform("time", time);
     // alpha -= int(alpha / M_PI / 2) * M_PI * 2;
     // shader.setUniform("scale", scale);
-    std::cout << cam.campos.x << ' ' << cam.campos.y << ' ' << cam.campos.z << ' ' << MARCH
-              << '\n';  // << ' ' << cam.xz_ang << ' ' << cam.yz_ang << '\n';
+//    std::cout << cam.campos.x << ' ' << cam.campos.y << ' ' << cam.campos.z << ' ' << MARCH << ' ' << time
+//              << '\n';  // << ' ' << cam.xz_ang << ' ' << cam.yz_ang << '\n';
     shader.setUniform("MARCH", MARCH);
     shader.setUniform("mt_sz", cam.mt_sz);
     shader.setUniform("cam_pos", cam.campos.to_glsl());
