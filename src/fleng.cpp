@@ -16,7 +16,7 @@ signed main() {
   // rect.setPosition(100, 100);
   rect.setFillColor(sf::Color::Green);
   sf::Shader shader;
-  const std::string shader_path = SHADERS_DIR + std::string("fleng2.frag");
+  const std::string shader_path = SHADERS_DIR + std::string("fleng.frag");
 
   if (!shader.loadFromFile(shader_path, sf::Shader::Fragment)) {
     std::cerr << "YOU SUCKED(\n";
