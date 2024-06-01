@@ -20,6 +20,12 @@ float plane_dist(vec3 pos, int i) {
   return dot(pos - objects[i][0].xyz, normalize(objects[i][2].yzw));
 }
 
+float cuboid_dist(vec3 pos, int i) {
+  vec3 rel = abs(pos - objects[i][0].xyz) - objects[i][2].yzw;
+  // first term for case when dot is indide cube
+  return min(max(rel.x, max(rel.y, rel.z)), 0.0) + length(max(rel, 0.0));
+}
+
 float serp_dist(vec3 pos, int i)
 {
   float Scale = objects[i][2].y;
@@ -114,6 +120,9 @@ float obj_dist(vec3 pos, int j) {
   if (objects[j][2].x == 1.) {
     return plane_dist(pos, j);
   }
+  if (objects[j][2].x == 2.) {
+    return cuboid_dist(pos, j);
+  }
   if (objects[j][2].x == 100.) {
     return serp_dist(pos, j);
   }
@@ -132,6 +141,22 @@ vec3 sphere_norm(vec3 ray_pos, int j) {
 vec3 plane_norm(int j) {
   return normalize(objects[j][2].yzw);
 }
+
+vec3 cuboid_norm(vec3 ray_pos, int j) {
+  vec3 rel = ray_pos - objects[j][0].xyz;
+  vec3 signs = abs(rel) / rel;
+  rel = abs(abs(rel) - objects[j][2].yzw);
+  float mn = min(rel.x, min(rel.y, rel.z));
+  if (abs(rel.x - mn) < 0.00001) {
+    rel.xyz = vec3(1., 0., 0.);
+  } else if (abs(rel.y - mn) < 0.00001) {
+    rel.xyz = vec3(0., 1., 0.);
+  } else {
+    rel.xyz = vec3(0., 0., 1.);
+  }
+  return normalize(rel * signs);
+}
+
 vec3 light_dir = normalize(vec3(0., -1., 1.));
 
 vec3 fractal_norm(int j) {
@@ -145,18 +170,21 @@ vec3 obj_norm(vec3 ray_pos, int j) {
   if (objects[j][2].x == 1.) {
     return plane_norm(j);
   }
+  if (objects[j][2].x == 2.) {
+    return cuboid_norm(ray_pos, j);
+  }
   return fractal_norm(j);
 }
 
 // const vec2 viewport = vec2(800, 800);
-const vec4 sky = vec4(0.4, 0.6, 1.0, 1.0);
+const vec4 sky = vec4(0.4, 0.6, 1.0, 0.5);
 const vec4 ground = vec4(0.5, 0.5, 0.5, 1.0);
 const float mt_dist = 0.001;
 const float INF = 1000.;
 const float EPS = 0.00001;
 uniform int MARCH;
 
-const int REFLECT_COUNT = 4;
+const int REFLECT_COUNT = 30;
 
 float smin(float a, float b, float k) {
     float h = clamp(0.5 + 0.5*(a-b)/k, 0.0, 1.0);
@@ -248,17 +276,26 @@ void main()
 
     // Failed approaching to any object
     if (citer == MARCH) {
-      AO = 1.;
-      break;
+      gl_FragColor = gamma(get_surround(ray_pos, ray_dir) * ray_color * AO);
+      return;
+    }
+
+    // Object reflects color
+    ray_color *= objects[idx][1];
+
+    // Check if this is light source
+    if (objects[idx][1].w < 0) {
+      ray_color.w *= -1;
+      gl_FragColor = gamma(ray_color * AO);
+      return;
     }
 
     // Object reflects ray
-    ray_color *= objects[idx][1];
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
     ray_pos += ray_dir * abs(EPS) * 2.;
     
   }
-  gl_FragColor = gamma(get_surround(ray_pos, ray_dir) * ray_color * AO);
+  gl_FragColor = 0.;
   return;
 }
 

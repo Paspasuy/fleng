@@ -5,8 +5,7 @@
 class Sphere : public RenderObject {
   vec3 pos;
   vec4 color;
-  vec4 prop; // (radius, , , )
-  vec3 reflect;
+  vec4 prop;  // (radius, , , )
 
  public:
   Sphere() {

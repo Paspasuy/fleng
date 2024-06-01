@@ -36,14 +36,21 @@ signed main() {
 
   obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
   obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 1.), 0.7));
-  obj.push_back(new Sphere(vec3(2, 2, 2), vec4(0.4, 1.0, 0.6, 1.), 0.7));
-  obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(1.0, 1.0, 1.0, 0.9), 0.3));
+  obj.push_back(new Cuboid(vec3(2, 3.5, 2), vec4(0.4, 1.0, 0.6, 1.), vec3(0.5, 3, 1)));
+  obj.push_back(new Cuboid(vec3(5, 5, 5), vec4(0.8, 0.9, 0.95, 1.), 1.8));
+  obj.push_back(new Cuboid(vec3(9, 5, 5), vec4(0.8, 0.9, 0.95, 1.), 1.8));
+  // obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(1.0, 1.0, 1.0, 0.9), 0.3));
 
+  // Light sources
+  obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(0.0, 1.0, 1.0, -1.0), 0.3));
+  obj.push_back(new Cuboid(vec3(-6, 5, 5.), vec4(0.95, 0.55, 0.31, -1.), vec3(0.1, 6, 5)));
+
+  // Fractals
   // obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
   // obj.push_back(new SerpinskyTetrahedron(vec4(1.0, 0.7, 0.0, 1.)));
-   obj.push_back(new MandelBulb(vec4(0.9, 0.2, 0.2, 1.)));
+  obj.push_back(new MandelBulb(vec4(0.9, 0.2, 0.2, 1.)));
   Camera cam;
-  
+
   sf::Clock cl;
 
   int MARCH = INITIAL_MARCH_ITERATIONS;
@@ -110,8 +117,8 @@ signed main() {
     shader.setUniform("time", time);
     // alpha -= int(alpha / M_PI / 2) * M_PI * 2;
     // shader.setUniform("scale", scale);
-//    std::cout << cam.campos.x << ' ' << cam.campos.y << ' ' << cam.campos.z << ' ' << MARCH << ' ' << time
-//              << '\n';  // << ' ' << cam.xz_ang << ' ' << cam.yz_ang << '\n';
+    //    std::cout << cam.campos.x << ' ' << cam.campos.y << ' ' << cam.campos.z << ' ' << MARCH << ' ' << time
+    //              << '\n';  // << ' ' << cam.xz_ang << ' ' << cam.yz_ang << '\n';
     shader.setUniform("MARCH", MARCH);
     shader.setUniform("mt_sz", cam.mt_sz);
     shader.setUniform("cam_pos", cam.campos.to_glsl());
