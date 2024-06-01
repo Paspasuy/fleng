@@ -2,8 +2,8 @@
 
 #include <string>
 
-const int VIEWPORT_WIDTH = 800;
-const int VIEWPORT_HEIGHT = 800;
+const int VIEWPORT_WIDTH = 1800;
+const int VIEWPORT_HEIGHT = 1800;
 const int FRAMERATE_LIMIT = 60;
 const char* APP_TITLE = "fleng";
 

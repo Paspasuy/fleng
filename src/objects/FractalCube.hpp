@@ -3,6 +3,7 @@
 #include "RenderObject.hpp"
 
 class FractalCube : public RenderObject {
+  // Actually this is Mandelbox
   vec3 pos;
   vec4 color;
 

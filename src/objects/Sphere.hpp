@@ -5,16 +5,17 @@
 class Sphere : public RenderObject {
   vec3 pos;
   vec4 color;
-  vec4 prop;
+  vec4 prop; // (radius, , , )
+  vec3 reflect;
 
  public:
   Sphere() {
   }
 
-  Sphere(vec3 pos, vec4 color, vec4 prop)
+  Sphere(vec3 pos, vec4 color, float radius)
       : pos(pos),
         color(color),
-        prop(prop) {
+        prop(radius, 0, 0, 0) {
   }
 
   std::array<float, 16> exportData() override {

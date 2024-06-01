@@ -16,7 +16,7 @@ signed main() {
   // rect.setPosition(100, 100);
   rect.setFillColor(sf::Color::Green);
   sf::Shader shader;
-  const std::string shader_path = SHADERS_DIR + std::string("fleng.frag");
+  const std::string shader_path = SHADERS_DIR + std::string("fleng2.frag");
 
   if (!shader.loadFromFile(shader_path, sf::Shader::Fragment)) {
     std::cerr << "YOU SUCKED(\n";
@@ -29,14 +29,16 @@ signed main() {
   renderTexture.display();
   sf::Sprite sprite(renderTexture.getTexture());
   int t = 0;
+
   std::vector<RenderObject*> obj;
-  obj.push_back(new Sphere(vec3(0, 0, 0), vec4(1.0, 1.0, 1., 1.), vec4(0.2, 0., 0., 0.)));
-  // sph.emplace_back(Sph(vec3(1, 0, 0), vec4(1.0, 0.0, 0., 1.), vec4(0.2, 0.,
-  // 0., 0.))); sph.emplace_back(Sph(vec3(0, 1, 0), vec4(0.0, 1.0, 0., 1.),
-  // vec4(0.2, 0., 0., 0.))); sph.emplace_back(Sph(vec3(0, 0, 1), vec4(0.0,
-  // 0.0, 1., 1.), vec4(0.2, 0., 0., 0.)));
-  obj.push_back(new Plane(vec3(0, -1, 0), vec4(1.0, 0.3, 1., 1.), vec3(0, 1, 0)));
-  obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
+  obj.push_back(new Sphere(vec3(2, 2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
+  obj.push_back(new Sphere(vec3(0, 2, 1), vec4(0.5, 0.7, 1., 1.), 0.7));
+  obj.push_back(new Sphere(vec3(2, 2, 2), vec4(0.4, 1.0, 0.6, 1.), 0.7));
+  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.5, 0.3, 0.2, 1.), vec3(0, 1, 0)));
+
+  // obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
+  // obj.push_back(new SerpinskyTetrahedron(vec4(1.0, 0.7, 0.0, 1.)));
+   obj.push_back(new MandelBulb(vec4(0.9, 0.2, 0.2, 1.)));
   Camera cam;
   // sf::Clock cl;
 

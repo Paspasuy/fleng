@@ -12,7 +12,7 @@ vec3 warp(vec3 pos) {
 }
 
 float sphere_dist(vec3 pos, int i) {
-	return (abs(length(objects[i][0].xyz - pos)) - objects[i][2].y);
+	return ((abs(length(objects[i][0].xyz - pos)) - objects[i][2].y));
 }
 
 float plane_dist(vec3 pos, int i) {
@@ -131,11 +131,11 @@ vec3 sphere_norm(vec3 ray_pos, int j) {
 }
 
 vec3 plane_norm(int j) {
-	return objects[j][2].yzw;
+	return normalize(objects[j][2].yzw);
 }
 vec3 light_dir = normalize(vec3(0., -1., 1.));
 
-vec3 serp_norm(int j) {
+vec3 fractal_norm(int j) {
 	return -light_dir;//vec3(0., 0., 0.);
 }
 
@@ -146,22 +146,19 @@ vec3 obj_norm(vec3 ray_pos, int j) {
 	if (objects[j][2].x == 1.) {
 		return plane_norm(j);
 	}
-	return serp_norm(j);
+	return fractal_norm(j);
 }
 
 // const vec2 viewport = vec2(800, 800);
-const vec4 sky = vec4(0.1, 0.1, 0.4, 1.0);
-// const vec4 sky = vec4(0.4, 0.6, 1.0, 1.0);
+const vec4 sky = vec4(0.4, 0.6, 1.0, 1.0);
 const vec4 ground = vec4(0.5, 0.5, 0.5, 1.0);
 const float mt_dist = 0.001;
-// const float INF = 10000.;
-// const float EPS = 0.00001;
-// const int MARCH = 300;
-// const int SUN_MARCH = 200;
-const float INF = 100.;
-const float EPS = 0.0001;
+const float INF = 10000.;
+const float EPS = 0.00001;
 uniform int MARCH;
 const int SUN_MARCH = 100;
+
+const int REFLECT_COUNT = 4;
 
 float smin(float a, float b, float k) {
     float h = clamp(0.5 + 0.5*(a-b)/k, 0.0, 1.0);
@@ -194,25 +191,51 @@ void main()
 	int idx = 0;
 	int iter = 0;
 	float mind = INF, maxd = 0.;
-	for (; iter < MARCH && lastd > EPS && lastd < INF; ++iter) {
-		float dist = INF;
-		for (int j = 0; j < obj_cnt; ++j) {
-			float nd = obj_dist(warp(ray_pos), j);
-			if (nd < dist) {
-				dist = nd;
-				idx = j;
-			}
-		}
-		// dist = min(dist, smin(sphere_dist(ray_pos, 0), sphere_dist(ray_pos, 2), 0.5));
-		ray_pos += ray_dir * dist;
-		lastd = dist;
-	}
-	if (lastd >= INF) {
-		gl_FragColor = gamma(get_sky(ray_dir));
-		return;
-	}
 	float AO = 1.;
-	AO = pow(1. - float(iter) / float(MARCH), 2.);
+  
+  vec4 ray_color = vec4(1., 1., 1., 1.);
+
+	for (int iter_refl = 0; iter_refl < REFLECT_COUNT; ++iter_refl) {
+
+    int citer = 0;
+    lastd = 1.;
+    // March to the nearest object
+    for (; citer < MARCH && lastd > EPS && lastd < INF; ++citer) {
+      float dist = INF;
+      for (int j = 0; j < obj_cnt; ++j) {
+        float nd = obj_dist(warp(ray_pos), j);
+        if (nd < dist) {
+          dist = nd;
+          idx = j;
+        }
+      }
+      // dist = min(dist, smin(sphere_dist(ray_pos, 0), sphere_dist(ray_pos, 2), 0.5));
+      ray_pos += ray_dir * dist;
+      lastd = dist;
+    }
+
+    // Ray points to the sky
+    if (lastd >= INF) {
+      gl_FragColor = gamma(get_sky(ray_dir)) * ray_color * AO;
+      return;
+    }
+
+    // Object reflects ray
+    ray_color *= objects[idx][1];
+    ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
+    ray_pos += ray_dir * abs(EPS + lastd) * 2.;
+
+    if (objects[idx][2].x >= 100) {
+      AO = pow(1. - float(citer) / float(MARCH), 2.);
+      break;
+    }
+    if (iter_refl == 0) {
+      iter = citer;
+    }
+  }
+  gl_FragColor = ray_color * AO;
+  return;
+
 	float shadow = 1.;
 	vec3 n = obj_norm(ray_pos, idx);
  	if (dot(-light_dir, n) > 0.) {

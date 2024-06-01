@@ -5,6 +5,8 @@
 enum ObjectType {
   SPHERE = 0,
   PLANE = 1,
+  SERPINSKY_TETRA = 100,
+  MANDELBULB = 101,
   FRACTAL_CUBE = 102,
 };
 
