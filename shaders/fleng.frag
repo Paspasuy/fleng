@@ -46,6 +46,7 @@ float serp_dist(vec3 pos, int i)
 
 
 float mandelbulb_dist(vec3 pos, int el) {
+  pos -= objects[el][0].xyz;
   float Iterations = objects[el][2].z;
   float Bailout = 100.;
   float Power = 8.;
@@ -157,7 +158,7 @@ vec3 cuboid_norm(vec3 ray_pos, int j) {
   return normalize(rel * signs);
 }
 
-vec3 light_dir = normalize(vec3(0., -1., 1.));
+vec3 light_dir = normalize(vec3(0.3, -0.3, 0.7));
 
 vec3 fractal_norm(int j) {
   return -light_dir;
@@ -227,26 +228,7 @@ vec4 get_surround(vec3 ray_pos, vec3 ray_dir) {
 }
 
 
-void main()
-{
-  vec3 yaxis = cross(cam_dir, xaxis);
-  vec2 xy = (gl_TexCoord[0].xy - 0.5) * mt_sz;
-
-  vec3 ray_pos = cam_pos;
-  vec3 ray_dir = normalize(mt_dist * cam_dir + xaxis * xy.x + yaxis * xy.y);
-  float lastd = 1.;
-  int idx = 0;
-  float mind = INF, maxd = 0.;
-  float AO = 1.;
-  
-  vec4 ray_color = vec4(1., 1., 1., 1.);
-
-  for (int iter_refl = 0; iter_refl < REFLECT_COUNT; ++iter_refl) {
-
-    int citer = 0;
-    lastd = 1.;
-
-    // March to the nearest object
+void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3 ray_dir, inout int idx) {
     for (; citer < MARCH && lastd > EPS && lastd < INF; ++citer) {
       float dist = INF;
       for (int j = 0; j < obj_cnt; ++j) {
@@ -259,6 +241,29 @@ void main()
       ray_pos += ray_dir * dist;
       lastd = dist;
     }
+}
+
+
+void main()
+{
+  vec3 yaxis = cross(cam_dir, xaxis);
+  vec2 xy = (gl_TexCoord[0].xy - 0.5) * mt_sz;
+
+  vec3 ray_pos = cam_pos;
+  vec3 ray_dir = normalize(mt_dist * cam_dir + xaxis * xy.x + yaxis * xy.y);
+  float lastd = 1.;
+  int idx = 0;
+  float AO = 1.;
+  
+  vec4 ray_color = vec4(1., 1., 1., 1.);
+
+  for (int iter_refl = 0; iter_refl < REFLECT_COUNT; ++iter_refl) {
+
+    int citer = 0;
+    lastd = 1.;
+
+    // March to the nearest object
+    raymarch(citer, lastd, ray_pos, ray_dir, idx);
 
     // Ray points to the sky
     if (lastd >= INF) {

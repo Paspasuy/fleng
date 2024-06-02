@@ -32,7 +32,7 @@ signed main() {
 
   std::vector<RenderObject*> obj;
   // Shader uses that first object is floor
-  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.5, 0.3, 0.2, 1.), vec3(0, 1, 0)));
+  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.5, 0.3, 0.2, 0.4), vec3(0, 1, 0)));
 
   obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
   obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 1.), 0.7));
@@ -48,7 +48,7 @@ signed main() {
   // Fractals
   // obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
   // obj.push_back(new SerpinskyTetrahedron(vec4(1.0, 0.7, 0.0, 1.)));
-  obj.push_back(new MandelBulb(vec4(0.9, 0.2, 0.2, 1.)));
+  obj.push_back(new MandelBulb(vec3(-0.7, 2, 3.5), vec4(0.9, 0.2, 0.2, 1.)));
   Camera cam;
 
   sf::Clock cl;
