@@ -36,7 +36,8 @@ signed main() {
   //  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.1, 0.1, 0.10, 0.5), vec3(0, 1, 0.4)));
 
   obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
-  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 0.0), 0.7));
+//  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 0.0), 0.7));
+  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.2, 0.2, 0.2, 0.1), 0.7));
   obj.push_back(new Cuboid(vec3(2, 3.5, 2), vec4(0.4, 1.0, 0.6, 1.), vec3(0.5, 3, 1)));
   obj.push_back(new Cuboid(vec3(5, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
   obj.push_back(new Cuboid(vec3(9, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));

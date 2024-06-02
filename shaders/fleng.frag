@@ -193,17 +193,10 @@ float smin(float a, float b, float k) {
 }
 
 vec4 gamma(vec4 color) {
-//  if (mod(time, 1.) < .5) {
-    color.x = pow(color.x, 0.45);
-    color.y = pow(color.y, 0.45);
-    color.z = pow(color.z, 0.45);
-    color.w = 1.;
-/*  } else {
-    // gamma correction
-    color = max( vec3(0), color - 0.004);
-    color = (color*(6.2*color + .5)) / (color*(6.2*color+1.7) + 0.06);
-  }
-*/
+  color.x = pow(color.x, 0.45);
+  color.y = pow(color.y, 0.45);
+  color.z = pow(color.z, 0.45);
+  color.w = 1.;
   return color;
 
 }
@@ -267,18 +260,19 @@ vec3 get_surround_for_far(vec3 ray_pos, vec3 ray_dir) {
 
 
 
-vec3 get_diffuse_color(vec3 ray_pos, vec3 ray_dir, int obj_idx) {
+vec3 dumb_diffuse_color(vec3 ray_pos, vec3 ray_dir, int obj_idx) {
   vec3 color = 0.;
   vec3 surface_norm = obj_norm(ray_pos, obj_idx);
   for (int j = 0; j < obj_cnt; ++j) {
     if (j == obj_idx) continue;
-    if (dot(surface_norm, objects[j][0].xyz - ray_pos) < 0.) continue;
-    float dist = obj_dist(warp(ray_pos), j) * 5;
+    vec3 to_obj = objects[j][0].xyz - ray_pos;
+    if (dot(surface_norm, to_obj) < 0.) continue;
+    float dist = obj_dist(warp(ray_pos), j) * 4;
     dist *= dist;
-    color += objects[j][1].xyz / (0.5 + dist);
+    color += dot(surface_norm, to_obj) * objects[j][1].xyz / (0.5 + dist);
   }
 //  if (mod(time, 1) > 0.5)
-  color += get_diffuse_surround(ray_pos, reflect(ray_dir, surface_norm));
+//  color += get_diffuse_surround(ray_pos, reflect(ray_dir, surface_norm));
   color = clamp(color, 0., 1.);
 
   color *= objects[obj_idx][1].xyz;
@@ -341,7 +335,7 @@ void main()
       return;
     }
 
-    vec3 diffuse_color = get_diffuse_color(ray_pos, ray_dir, idx);
+    vec3 diffuse_color = dumb_diffuse_color(ray_pos, ray_dir, idx);
 
     // Object reflects color
     sum_color.xyz += diffuse_color * (1. - objects[idx][1].w) * ray_color.w;
