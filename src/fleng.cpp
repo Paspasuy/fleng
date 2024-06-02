@@ -32,15 +32,22 @@ signed main() {
 
   std::vector<RenderObject*> obj;
   // Shader uses that first object is floor
-  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.5, 0.3, 0.2, 0.4), vec3(0, 1, 0)));
+  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.1, 0.1, 0.10, 0.5), vec3(0, 1, 0.)));
+  //  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.1, 0.1, 0.10, 0.5), vec3(0, 1, 0.4)));
 
   obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
-  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 1.), 0.7));
+  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 0.0), 0.7));
   obj.push_back(new Cuboid(vec3(2, 3.5, 2), vec4(0.4, 1.0, 0.6, 1.), vec3(0.5, 3, 1)));
-  obj.push_back(new Cuboid(vec3(5, 5, 5), vec4(0.8, 0.9, 0.95, 1.), 1.8));
-  obj.push_back(new Cuboid(vec3(9, 5, 5), vec4(0.8, 0.9, 0.95, 1.), 1.8));
+  obj.push_back(new Cuboid(vec3(5, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
+  obj.push_back(new Cuboid(vec3(9, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
   // obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(1.0, 1.0, 1.0, 0.9), 0.3));
 
+  // For perftest in future
+  /*
+    for (int i = 0; i < 100; ++i) {
+      obj.push_back(new Sphere(vec3(2 * i, 2.2, 0), vec4(1.0, 1.0, 1.0, 0.5), 0.7));
+    }
+  */
   // Light sources
   obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(0.0, 1.0, 1.0, -1.0), 0.3));
   obj.push_back(new Cuboid(vec3(-6, 5, 5.), vec4(0.95, 0.55, 0.31, -1.), vec3(0.1, 6, 5)));
@@ -49,6 +56,7 @@ signed main() {
   // obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
   // obj.push_back(new SerpinskyTetrahedron(vec4(1.0, 0.7, 0.0, 1.)));
   obj.push_back(new MandelBulb(vec3(-0.7, 2, 3.5), vec4(0.9, 0.2, 0.2, 1.)));
+
   Camera cam;
 
   sf::Clock cl;

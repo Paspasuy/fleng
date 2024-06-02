@@ -14,7 +14,7 @@ class Plane : public RenderObject {
   Plane(vec3 pos, vec4 color, vec3 norm)
       : pos(pos),
         color(color),
-        norm(norm) {
+        norm(norm.norm()) {
   }
 
   std::array<float, 16> exportData() override {

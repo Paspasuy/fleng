@@ -13,11 +13,11 @@ vec3 warp(vec3 pos) {
 }
 
 float sphere_dist(vec3 pos, int i) {
-  return ((abs(length(objects[i][0].xyz - pos)) - objects[i][2].y));
+  return length(objects[i][0].xyz - pos) - objects[i][2].y;
 }
 
 float plane_dist(vec3 pos, int i) {
-  return dot(pos - objects[i][0].xyz, normalize(objects[i][2].yzw));
+  return dot(objects[i][0].xyz - pos, -objects[i][2].yzw);
 }
 
 float cuboid_dist(vec3 pos, int i) {
@@ -140,7 +140,7 @@ vec3 sphere_norm(vec3 ray_pos, int j) {
 }
 
 vec3 plane_norm(int j) {
-  return normalize(objects[j][2].yzw);
+  return objects[j][2].yzw;
 }
 
 vec3 cuboid_norm(vec3 ray_pos, int j) {
@@ -178,11 +178,11 @@ vec3 obj_norm(vec3 ray_pos, int j) {
 }
 
 // const vec2 viewport = vec2(800, 800);
-const vec4 sky = vec4(0.4, 0.6, 1.0, 0.5);
-const vec4 ground = vec4(0.5, 0.5, 0.5, 1.0);
+const vec3 sky = vec3(0.2, 0.3, 0.5);
+const vec3 sun = vec3(1.0, 1.0, 0.4);
 const float mt_dist = 0.001;
 const float INF = 1000.;
-const float EPS = 0.00001;
+const float EPS = 0.001;
 uniform int MARCH;
 
 const int REFLECT_COUNT = 30;
@@ -197,6 +197,7 @@ vec4 gamma(vec4 color) {
     color.x = pow(color.x, 0.45);
     color.y = pow(color.y, 0.45);
     color.z = pow(color.z, 0.45);
+    color.w = 1.;
 /*  } else {
     // gamma correction
     color = max( vec3(0), color - 0.004);
@@ -208,20 +209,20 @@ vec4 gamma(vec4 color) {
 }
 
 
-vec4 get_sky(vec3 ray_dir) {
-  vec4 sun = vec4(0.95, 0.9, 1.0, 1.);
-  sun *= max(0., pow(dot(-light_dir, ray_dir), 128.));
-  return clamp(sun + sky, 0., 1.);
+vec3 get_sky(vec3 ray_dir) {
+  vec3 cur_sun = sun;
+  cur_sun *= max(0., pow(dot(-light_dir, ray_dir), 128.));
+  return clamp(cur_sun + sky, 0., 1.);
 }
 
-vec4 get_floor(vec3 ray_pos, vec3 ray_dir) {
-  return objects[0][1];
+vec3 get_floor(vec3 ray_pos, vec3 ray_dir) {
+  return objects[0][1].xyz;
 }
 
-// Heavily rely that objects[0] is floor
-vec4 get_surround(vec3 ray_pos, vec3 ray_dir) {
-  vec4 result = get_sky(ray_dir);
-  if (ray_dir.y < 0.) {
+// Heavily relies on that objects[0] is floor
+vec3 get_specular_surround(vec3 ray_pos, vec3 ray_dir) {
+  vec3 result = get_sky(ray_dir);
+  if (dot(ray_dir, objects[0][2].yzw) < 0.) {
     result *= get_floor(ray_pos, ray_dir);
   }
   return result;
@@ -229,7 +230,7 @@ vec4 get_surround(vec3 ray_pos, vec3 ray_dir) {
 
 
 void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3 ray_dir, inout int idx) {
-    for (; citer < MARCH && lastd > EPS && lastd < INF; ++citer) {
+    for (; citer < MARCH && abs(lastd) > EPS && lastd < INF; ++citer) {
       float dist = INF;
       for (int j = 0; j < obj_cnt; ++j) {
         float nd = obj_dist(warp(ray_pos), j);
@@ -243,6 +244,47 @@ void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3
     }
 }
 
+vec3 get_diffuse_surround(vec3 ray_pos, vec3 ray_dir) {
+  // ray pos is for checkers floor
+  // return get_surround(ray_pos, ray_dir).xyz * pow(mod(time, 1.), 2.3);//0.4;
+  return get_specular_surround(ray_pos, ray_dir) / 20.;//* pow(mod(time, 1.), 2.3) / 20;//0.4;
+}
+
+// This function analitically resolves problems occuring when raymarching takes too many iterations
+vec3 get_surround_for_far(vec3 ray_pos, vec3 ray_dir) {
+  vec3 floor_norm = objects[0][2].yzw;
+  if (dot(ray_dir, floor_norm) < 0.) {
+    vec3 refl = reflect(ray_dir, floor_norm);
+    vec3 intersection_pt = ray_pos + ray_dir * plane_dist(ray_pos, 0) / dot(-floor_norm, ray_dir);
+    return mix(
+        // Intersect ray with plane and get diffuse from there
+        get_diffuse_surround(intersection_pt, refl),
+        get_sky(refl),
+        objects[0][1].w) * objects[0][1].xyz;
+  }
+  return get_sky(ray_dir);
+}
+
+
+
+vec3 get_diffuse_color(vec3 ray_pos, vec3 ray_dir, int obj_idx) {
+  vec3 color = 0.;
+  vec3 surface_norm = obj_norm(ray_pos, obj_idx);
+  for (int j = 0; j < obj_cnt; ++j) {
+    if (j == obj_idx) continue;
+    if (dot(surface_norm, objects[j][0].xyz - ray_pos) < 0.) continue;
+    float dist = obj_dist(warp(ray_pos), j) * 5;
+    dist *= dist;
+    color += objects[j][1].xyz / (0.5 + dist);
+  }
+//  if (mod(time, 1) > 0.5)
+  color += get_diffuse_surround(ray_pos, reflect(ray_dir, surface_norm));
+  color = clamp(color, 0., 1.);
+
+  color *= objects[obj_idx][1].xyz;
+  return color;
+
+}
 
 void main()
 {
@@ -256,6 +298,7 @@ void main()
   float AO = 1.;
   
   vec4 ray_color = vec4(1., 1., 1., 1.);
+  vec4 sum_color = vec4(0., 0., 0., 1.);
 
   for (int iter_refl = 0; iter_refl < REFLECT_COUNT; ++iter_refl) {
 
@@ -267,40 +310,50 @@ void main()
 
     // Ray points to the sky
     if (lastd >= INF) {
-      gl_FragColor = gamma(get_sky(ray_dir) * ray_color * AO);
+      ray_color.xyz *= get_sky(ray_dir).xyz;
+      sum_color.xyz += ray_color.xyz * ray_color.w;
+      //sum_color.xyz += get_surround_for_far(ray_pos, ray_dir) * ray_color.w;
+      gl_FragColor = gamma(sum_color * AO);
       return;
     }
 
     // Do not reflect further if hit fractal
     if (objects[idx][2].x >= 100.) {
-      ray_color *= objects[idx][1];
       AO = pow(1. - float(citer) / float(MARCH), 2.);
-      gl_FragColor = gamma(ray_color * AO);
+      ray_color *= objects[idx][1] * AO;
+      sum_color.xyz += ray_color.xyz * ray_color.w;
+      gl_FragColor = gamma(sum_color);
       return;
     }
 
-    // Failed approaching to any object
+    // Failed approaching to any object — either sky or floor
     if (citer == MARCH) {
-      gl_FragColor = gamma(get_surround(ray_pos, ray_dir) * ray_color * AO);
+      sum_color.xyz += ray_color * get_surround_for_far(ray_pos, ray_dir) * ray_color.w;
+      gl_FragColor = gamma(sum_color * AO);
       return;
     }
-
-    // Object reflects color
-    ray_color *= objects[idx][1];
 
     // Check if this is light source
-    if (objects[idx][1].w < 0) {
-      ray_color.w *= -1;
-      gl_FragColor = gamma(ray_color * AO);
+    if (objects[idx][1].w < 0.) {
+      ray_color.xyz *= objects[idx][1].xyz;
+      sum_color.xyz += ray_color.xyz * ray_color.w;
+      gl_FragColor = gamma(sum_color * AO);
       return;
     }
+
+    vec3 diffuse_color = get_diffuse_color(ray_pos, ray_dir, idx);
+
+    // Object reflects color
+    sum_color.xyz += diffuse_color * (1. - objects[idx][1].w) * ray_color.w;
+    ray_color *= objects[idx][1];
 
     // Object reflects ray
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
     ray_pos += ray_dir * abs(EPS) * 2.;
     
   }
-  gl_FragColor = 0.;
+  // Found no light source
+  gl_FragColor = vec4(0.);
   return;
 }
 

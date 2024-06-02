@@ -1,8 +1,29 @@
 fps
-Камера с фокусом
+Камера с фокусом (динамическая глубина резкости)
 Шероховатость
 Аппроксимировать шероховатость за n^2 (?)
 Загрузка сцены из файла в рантайме
 Оставлять 16 ближайших объектов
 Блоки из нескольких матриц параметров подряд, чтобы задавать более сложные фигуры
 Скриншоты по кнопке
+
+= почитать? =
+частицы?
+tone mapping адаптация контраста
+light shaft
+hdr
+Bidirectional reflectance distribution function — BRDF
+
+PBS
+since COD2: diffuse, normal, specular
+since COD AW: albedo, metalness, roughness
+
+https://computergraphics.stackexchange.com/questions/7556/what-is-the-physical-interpretation-of-normal-roughness-albedo-and-metalness-m
+
+image based lightning
+screen space local reflections
+Separable Subsurface Scattering
+
+color normal gloss transmission fuzz occlusion (карты лиц since bo3)
+treyarch volumetric global illumination
+volumetric lightning
