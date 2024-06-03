@@ -1,4 +1,6 @@
-uniform mat4 objects[50];
+const int SZ = 110;
+uniform mat4 objects[SZ];
+uniform mat4 obj_indices[SZ];
 uniform float time;
 uniform float mt_sz;
 uniform vec3 cam_pos, cam_dir, xaxis;
@@ -182,7 +184,7 @@ const vec3 sky = vec3(0.2, 0.3, 0.5);
 const vec3 sun = vec3(1.0, 1.0, 0.4);
 const float mt_dist = 0.001;
 const float INF = 1000.;
-const float EPS = 0.001;
+const float EPS = 0.00001;
 uniform int MARCH;
 
 const int REFLECT_COUNT = 30;
@@ -222,9 +224,10 @@ vec3 get_specular_surround(vec3 ray_pos, vec3 ray_dir) {
 }
 
 
-void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3 ray_dir, inout int idx) {
-    for (; citer < MARCH && abs(lastd) > EPS && lastd < INF; ++citer) {
-      float dist = INF;
+void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3 ray_dir, inout int idx, int start_obj) {
+  for (; citer < MARCH && abs(lastd) > EPS && lastd < INF; ++citer) {
+    float dist = INF;
+    if (start_obj == -1) {
       for (int j = 0; j < obj_cnt; ++j) {
         float nd = obj_dist(warp(ray_pos), j);
         if (nd < dist) {
@@ -232,9 +235,20 @@ void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3
           idx = j;
         }
       }
-      ray_pos += ray_dir * dist;
-      lastd = dist;
+    } else {
+      for (int j = 0; j < obj_cnt; ++j) {
+      //for (int i = 0; i < 16; ++i) {
+      //  int j = (int)obj_indices[start_obj][i / 4][i % 4];
+        float nd = obj_dist(warp(ray_pos), j);
+        if (nd < dist) {
+          dist = nd;
+          idx = j;
+        }
+      }
     }
+    ray_pos += ray_dir * dist;
+    lastd = dist;
+  }
 }
 
 vec3 get_diffuse_surround(vec3 ray_pos, vec3 ray_dir) {
@@ -293,6 +307,7 @@ void main()
   
   vec4 ray_color = vec4(1., 1., 1., 1.);
   vec4 sum_color = vec4(0., 0., 0., 1.);
+  int start_obj = -1;
 
   for (int iter_refl = 0; iter_refl < REFLECT_COUNT; ++iter_refl) {
 
@@ -300,7 +315,7 @@ void main()
     lastd = 1.;
 
     // March to the nearest object
-    raymarch(citer, lastd, ray_pos, ray_dir, idx);
+    raymarch(citer, lastd, ray_pos, ray_dir, idx, start_obj);
 
     // Ray points to the sky
     if (lastd >= INF) {
@@ -344,7 +359,7 @@ void main()
     // Object reflects ray
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
     ray_pos += ray_dir * abs(EPS) * 2.;
-    
+    start_obj = idx;
   }
   // Found no light source
   gl_FragColor = vec4(0.);

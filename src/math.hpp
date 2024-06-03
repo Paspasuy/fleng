@@ -41,6 +41,9 @@ struct vec3 {
   vec3 operator*(float p) {
     return vec3(x * p, y * p, z * p);
   }
+  float dist(vec3 other) {
+    return (other - *this).sz();
+  }
   float operator*(vec3 p) {
     return x * p.x + y * p.y + z * p.z;
   }

@@ -3,14 +3,11 @@
 #include "RenderObject.hpp"
 
 class MandelBulb : public RenderObject {
-  vec3 pos;
   vec4 color;
 
  public:
-  MandelBulb() = default;
-
   MandelBulb(vec3 pos, vec4 color)
-      : pos(pos),
+      : RenderObject(pos),
         color(color) {
   }
 

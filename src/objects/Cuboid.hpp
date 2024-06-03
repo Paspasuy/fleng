@@ -3,22 +3,18 @@
 #include "RenderObject.hpp"
 
 class Cuboid : public RenderObject {
-  vec3 pos;
   vec4 color;
   vec4 prop;  // (rx, ry, rz, )
 
  public:
-  Cuboid() {
-  }
-
   Cuboid(vec3 pos, vec4 color, float radius)
-      : pos(pos),
+      : RenderObject(pos),
         color(color),
         prop(radius, radius, radius, 0) {
   }
 
   Cuboid(vec3 pos, vec4 color, vec3 radii)
-      : pos(pos),
+      : RenderObject(pos),
         color(color),
         prop(radii.x, radii.y, radii.z, 0) {
   }

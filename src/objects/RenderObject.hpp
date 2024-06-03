@@ -13,6 +13,16 @@ enum ObjectType {
 
 class RenderObject {
  public:
+  vec3 pos;
+
+ public:
+  RenderObject() = default;
+  RenderObject(vec3 pos)
+      : pos(pos) {
+  }
   virtual std::array<float, 16> exportData() = 0;
+  virtual float dist(vec3 point) {
+    return pos.dist(point);
+  }
   virtual ~RenderObject() = default;
 };
