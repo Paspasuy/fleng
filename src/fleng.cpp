@@ -4,13 +4,14 @@
 #include "utils/utils.hpp"
 #include "math.hpp"
 #include "camera.hpp"
+#include <cassert>
 #include "objects/objects.hpp"
 
 // #include <GL/glew.h>
 
 signed main() {
   // sf::Glsl::Mat4 *mtx;// = new sf::Glsl::Mat4[2];
-  sf::RenderWindow window(sf::VideoMode(VIEWPORT_WIDTH, VIEWPORT_HEIGHT),
+  sf::RenderWindow window(sf::VideoMode({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}),
                           APP_TITLE);  //, sf::Style::Fullscreen);
   window.setFramerateLimit(FRAMERATE_LIMIT);
   sf::RectangleShape rect(sf::Vector2f(VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
@@ -19,12 +20,12 @@ signed main() {
   sf::Shader shader;
   const std::string shader_path = SHADERS_DIR + std::string("fleng.frag");
 
-  if (!shader.loadFromFile(shader_path, sf::Shader::Fragment)) {
+  if (!shader.loadFromFile(shader_path, sf::Shader::Type::Fragment)) {
     std::cerr << "YOU SUCKED(\n";
     return -1;
   }
   sf::RenderTexture renderTexture;
-  renderTexture.create(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+  assert(renderTexture.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
   renderTexture.clear();
   renderTexture.draw(rect);
   renderTexture.display();
@@ -72,48 +73,47 @@ signed main() {
   bool paused = 0;
   while (window.isOpen()) {
     ++frames;
-    sf::Event event;
-    while (window.pollEvent(event)) {
-      if (event.type == sf::Event::Closed)
+    while (const std::optional event = window.pollEvent()) {
+      if (event->is<sf::Event::Closed>())
         window.close();
-      if (event.type == sf::Event::KeyPressed) {
-        if (event.key.code == sf::Keyboard::Hyphen)
+      if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Hyphen)
           cam.mt_sz *= 1.1;
-        if (event.key.code == sf::Keyboard::Equal)
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Equal)
           cam.mt_sz /= 1.1;
-        if (event.key.code == sf::Keyboard::Space)
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Space)
           paused ^= 1;
-        if (event.key.code == sf::Keyboard::Num3)
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Num3)
           MARCH -= 20;
-        if (event.key.code == sf::Keyboard::Num4)
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Num4)
           MARCH += 20;
-        if (event.key.code == sf::Keyboard::Num5)
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Num5)
           cam.speed /= 10;
-        if (event.key.code == sf::Keyboard::Num6)
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Num6)
           cam.speed *= 10;
-        if (event.key.code == sf::Keyboard::Num7) {
+        if (keyPressed->scancode == sf::Keyboard::Scancode::Num7) {
         }
       }
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
       cam.forward();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
       cam.backward();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
       cam.right();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
       cam.left();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
       cam.rot_xz(true);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
       cam.rot_xz(false);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
       cam.rot_yz(true);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
       cam.rot_yz(false);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2))
       cam.rot_xy(true);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1))
       cam.rot_xy(false);
     /*        if (!paused) {
                 (sph[2].pos.y += 0.01 * v);
