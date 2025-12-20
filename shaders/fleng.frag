@@ -24,13 +24,14 @@ float rand()
     seed = seed * 1664525u + 1013904223u; // LCG
     return float(seed) / 4294967296.0;
 }
-/*
+
+
 float rand(vec2 co) {
 //   vec2 co = vec2(time, time);
    return fract(sin(dot(co.xy,vec2(12.9898,78.233))) * 43758.5453);
 }
-*/
 
+/*
 double rand(vec2 co) {
     double a = 12.9898;
     double b = 78.233;
@@ -39,7 +40,18 @@ double rand(vec2 co) {
     float sn= mod(dt,3.14);
     return fract(sin(sn) * c) / 2;
 }
-
+*/
+/*
+highp float rand(vec2 co)
+{
+    highp float a = 12.9898;
+    highp float b = 78.233;
+    highp float c = 43758.5453;
+    highp float dt= dot(co.xy ,vec2(a,b));
+    highp float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+*/
 vec3 warp(vec3 pos) {
   // pos.xz = mod(pos.xz, 3.) - vec2(1.5);
   return pos;
@@ -431,18 +443,21 @@ void main()
     // Object reflects ray
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
 //    vec2 rv = (vec2(sin(time+10*ray_pos.x), sin(time+10*ray_pos.y)) + 1) / 2;
-    vec2 rv = vec2(rand(ray_pos), rand(ray_pos * cos(time)));
+    // vec2 rv = vec2(rand(ray_pos), rand(ray_pos * cos(time)));
+    // vec2 rv = vec2(rand(ray_pos) * cos(time * 1238.), rand(ray_pos) * sin(time * 3. + 12.));
+    vec2 rv = vec2(mix(rand(ray_pos), rand(), 0.8), mix(rand(ray_pos), rand(), 0.2));
     // vec2 rv = vec2(rand(), rand());
 // TODo: remove black area
-//    if (abs(length(dot(ray_dir, obj_norm(ray_pos, idx)))) >  0.4) {
-      ray_dir = randomDirectionInCone(ray_dir, (sin(time * 3) + 3) / 30 * (1-objects[idx][1].w), rv);
-//    }
+    if (abs(length(dot(ray_dir, obj_norm(ray_pos, idx)))) >  0.05) {
+      ray_dir = randomDirectionInCone(ray_dir, (sin(time * 5) + 3) / 30 * (1-objects[idx][1].w), rv);
+    }
 
-    ray_pos += ray_dir * abs(EPS) * 2.;
+    ray_pos += ray_dir * abs(EPS) * 30.;
     start_obj = idx;
   }
   // Found no light source
-  gl_FragColor = vec4(0.);
+//  gl_FragColor = sum_color;//vec4(1.);
+  gl_FragColor = vec4(1.);
   return;
 }
 

@@ -24,13 +24,25 @@ signed main() {
     std::cerr << "YOU SUCKED(\n";
     return -1;
   }
-  sf::RenderTexture renderTexture;
-  assert(renderTexture.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
-  renderTexture.clear();
-  renderTexture.draw(rect);
-  renderTexture.display();
-  sf::Sprite sprite(renderTexture.getTexture());
-  sf::RenderTexture currentRenderTexture;
+
+  sf::Shader accumulateShader;
+  if (!accumulateShader.loadFromFile(SHADERS_DIR + std::string("accumulate.frag"), sf::Shader::Type::Fragment)) {
+    std::cerr << "YOU SUCKED(\n";
+    return -1;
+  }
+
+  sf::RenderTexture currentRT;
+  sf::RenderTexture accumRT;
+//  sf::RenderTexture prev;
+
+  assert(currentRT.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
+  assert(accumRT.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
+//  assert(prev.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
+
+  sf::Sprite current(currentRT.getTexture());
+  sf::Sprite prev(accumRT.getTexture());
+  //fullscreen.setTexture(currentRT.getTexture());
+
 
   std::vector<RenderObject*> obj;
   // Shader uses that first object is floor
@@ -43,6 +55,9 @@ signed main() {
   obj.push_back(new Cuboid(vec3(2, 3.5, 2), vec4(0.4, 1.0, 0.6, 1.), vec3(0.5, 3, 1)));
   obj.push_back(new Cuboid(vec3(5, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
   obj.push_back(new Cuboid(vec3(9, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
+
+
+  obj.push_back(new Sphere(vec3(-5, 2.2, -5), vec4(1.0, 0.2, 0.2, 1.), 0.7));
   // obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(1.0, 1.0, 1.0, 0.9), 0.3));
 
   // For perftest in future
@@ -70,14 +85,18 @@ signed main() {
 
   int frames = 0;
   float fps = 0;
+  uint32_t stale = 0;
 
+  bool blur = false;
   bool paused = 0;
   while (window.isOpen()) {
+    if (blur) ++stale;
     ++frames;
     while (const std::optional event = window.pollEvent()) {
       if (event->is<sf::Event::Closed>())
         window.close();
       if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+        stale = 0;
         if (keyPressed->scancode == sf::Keyboard::Scancode::Hyphen)
           cam.mt_sz *= 1.1;
         if (keyPressed->scancode == sf::Keyboard::Scancode::Equal)
@@ -94,29 +113,42 @@ signed main() {
           cam.speed *= 10;
         if (keyPressed->scancode == sf::Keyboard::Scancode::Num7) {
         }
+        if (keyPressed->scancode == sf::Keyboard::Scancode::P) {
+          blur ^= 1;
+        }
       }
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
       cam.forward();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
       cam.backward();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
       cam.right();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
       cam.left();
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
       cam.rot_xz(true);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
       cam.rot_xz(false);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
       cam.rot_yz(true);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
       cam.rot_yz(false);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2)) {
       cam.rot_xy(true);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1))
+      stale = 0;
+    } if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1)) {
       cam.rot_xy(false);
-    /*        if (!paused) {
+      stale = 0;
+    } /*        if (!paused) {
                 (sph[2].pos.y += 0.01 * v);
                 if (sph[2].pos.y > 1.0  || sph[2].pos.y < 0.01) v = -v;
             }*/
@@ -133,6 +165,7 @@ signed main() {
     float time = elapsed.asSeconds();
     // std::cerr << CLOCKS_PER_SEC << '\n';
     // float time = float(clock())/CLOCKS_PER_SEC;
+    obj[6]->pos.y = 2.2 + sin(float(time)) * 2;
     shader.setUniform("time", time);
     // alpha -= int(alpha / M_PI / 2) * M_PI * 2;
     // shader.setUniform("scale", scale);
@@ -150,7 +183,31 @@ signed main() {
     // if (ut != -1)
     // glUniform1f(ut, clock() / CLOCKS_PER_SEC);
 //    window.clear(sf::Color::Black);
-    window.draw(sprite, &shader);
+
+    currentRT.clear(sf::Color::Black);
+    currentRT.draw(current, &shader);
+    currentRT.display();
+
+
+    accumulateShader.setUniform("currentFrame", currentRT.getTexture());
+    std::cout << stale << std::endl;
+    accumulateShader.setUniform("previousAccum", accumRT.getTexture());
+    accumulateShader.setUniform("invN", 1.f / float(stale + 1));
+    accumulateShader.setUniform("prevFactor", float(stale) / float(stale + 1));
+
+    accumRT.draw(current, &accumulateShader);
+    accumRT.display();
+//
+//    sf::Sprite quad;
+//    quad.setTexture(currentRT.getTexture()); // geometry source only
+//
+//    accumRT.clear(sf::Color::Black);
+
+
+//    window.draw(fullscreen, &shader);
+    // window.draw(current, &accumulateShader);
+    window.draw(sf::Sprite(accumRT.getTexture()));
+    //window.draw(sf::Sprite(currentRT.getTexture()));
     if (fps_clock.getElapsedTime().asSeconds() > 0.2) {
       float currentTime = fps_clock.getElapsedTime().asSeconds();
       float fps = frames / currentTime;
