@@ -281,7 +281,7 @@ vec3 dumb_diffuse_color(vec3 ray_pos, vec3 ray_dir, int obj_idx) {
     if (j == obj_idx) continue;
     vec3 to_obj = objects[j][0].xyz - ray_pos;
     if (dot(surface_norm, to_obj) < 0.) continue;
-    float dist = obj_dist(warp(ray_pos), j) * 4;
+    float dist = obj_dist(warp(ray_pos), j) * 3;
     dist *= dist;
     color += dot(surface_norm, to_obj) * objects[j][1].xyz / (0.5 + dist);
   }
@@ -358,7 +358,7 @@ void main()
 
     // Object reflects ray
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
-    ray_pos += ray_dir * abs(EPS) * 2.;
+    ray_pos += ray_dir * abs(EPS) * 200.;
     start_obj = idx;
   }
   // Found no light source
