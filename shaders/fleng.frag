@@ -9,6 +9,37 @@ uniform int obj_cnt;
 const float sq2 = 1.4142;
 const float sq3 = 1.73205;
 
+uint seed;
+float last_time;
+
+void initSeed()
+{
+    seed = uint(gl_FragCoord.x) * 1973u +
+           uint(gl_FragCoord.y) * 9277u +
+           uint(time * 1000.0) * 26699u;
+}
+
+float rand()
+{
+    seed = seed * 1664525u + 1013904223u; // LCG
+    return float(seed) / 4294967296.0;
+}
+/*
+float rand(vec2 co) {
+//   vec2 co = vec2(time, time);
+   return fract(sin(dot(co.xy,vec2(12.9898,78.233))) * 43758.5453);
+}
+*/
+
+double rand(vec2 co) {
+    double a = 12.9898;
+    double b = 78.233;
+    float c = 43758.5453;
+    float dt= dot(co.xy ,vec2(a,b));
+    float sn= mod(dt,3.14);
+    return fract(sin(sn) * c) / 2;
+}
+
 vec3 warp(vec3 pos) {
   // pos.xz = mod(pos.xz, 3.) - vec2(1.5);
   return pos;
@@ -267,7 +298,9 @@ vec3 get_surround_for_far(vec3 ray_pos, vec3 ray_dir) {
         // Intersect ray with plane and get diffuse from there
         get_diffuse_surround(intersection_pt, refl),
         get_sky(refl),
-        objects[0][1].w) * objects[0][1].xyz;
+        1.
+        //objects[0][1].w
+        ) * objects[0][1].xyz;
   }
   return get_sky(ray_dir);
 }
@@ -294,8 +327,46 @@ vec3 dumb_diffuse_color(vec3 ray_pos, vec3 ray_dir, int obj_idx) {
 
 }
 
+// Returns a random unit vector within a cone of angle alpha
+// around the direction `dir` (dir must be normalized)
+//
+// rnd.x, rnd.y must be uniform random numbers in [0, 1]
+vec3 randomDirectionInCone(vec3 dir, float alpha, vec2 rnd)
+{
+    // 1. Sample spherical cap
+    float cosAlpha = cos(alpha);
+    float cosTheta = mix(cosAlpha, 1.0, rnd.x); // uniform in cos(theta)
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    float phi = 2.0 * 3.14159265359 * rnd.y;
+
+    // Local-space direction (Z is cone axis)
+    vec3 localDir = vec3(
+        cos(phi) * sinTheta,
+        sin(phi) * sinTheta,
+        cosTheta
+    );
+
+    // 2. Build orthonormal basis around dir
+//    vec3 up = abs(dir.z) < 0.999 ? vec3(0.0, 0.0, 1.0)
+//                                 : vec3(1.0, 0.0, 0.0);
+
+    vec3 up = vec3(0.0, 0.0, 1.0);
+    vec3 tangent   = normalize(cross(up, dir));
+    vec3 bitangent = cross(dir, tangent);
+
+    // 3. Transform to world space
+    return normalize(
+        tangent   * localDir.x +
+        bitangent * localDir.y +
+        dir       * localDir.z
+    );
+}
+
+
 void main()
 {
+  seed = time;
   vec3 yaxis = cross(cam_dir, xaxis);
   vec2 xy = (gl_TexCoord[0].xy - 0.5) * mt_sz;
 
@@ -320,7 +391,7 @@ void main()
     // Ray points to the sky
     if (lastd >= INF) {
       ray_color.xyz *= get_sky(ray_dir).xyz;
-      sum_color.xyz += ray_color.xyz * ray_color.w;
+      sum_color.xyz += ray_color.xyz;// * ray_color.w;
       //sum_color.xyz += get_surround_for_far(ray_pos, ray_dir) * ray_color.w;
       gl_FragColor = gamma(sum_color * AO);
       return;
@@ -330,35 +401,44 @@ void main()
     if (objects[idx][2].x >= 100.) {
       AO = pow(1. - float(citer) / float(MARCH), 2.);
       ray_color *= objects[idx][1] * AO;
-      sum_color.xyz += ray_color.xyz * ray_color.w;
+      sum_color.xyz += ray_color.xyz;// * ray_color.w;
       gl_FragColor = gamma(sum_color);
       return;
     }
 
     // Failed approaching to any object — either sky or floor
     if (citer == MARCH) {
-      sum_color.xyz += ray_color * get_surround_for_far(ray_pos, ray_dir) * ray_color.w;
+      sum_color.xyz += ray_color * get_surround_for_far(ray_pos, ray_dir);// * ray_color.w;
       gl_FragColor = gamma(sum_color * AO);
+//      gl_FragColor = vec4(0.);
       return;
     }
 
     // Check if this is light source
     if (objects[idx][1].w < 0.) {
       ray_color.xyz *= objects[idx][1].xyz;
-      sum_color.xyz += ray_color.xyz * ray_color.w;
+      sum_color.xyz += ray_color.xyz;// * ray_color.w;
       gl_FragColor = gamma(sum_color * AO);
       return;
     }
 
-    vec3 diffuse_color = dumb_diffuse_color(ray_pos, ray_dir, idx);
+//    vec3 diffuse_color = dumb_diffuse_color(ray_pos, ray_dir, idx);
 
     // Object reflects color
-    sum_color.xyz += diffuse_color * (1. - objects[idx][1].w) * ray_color.w;
-    ray_color *= objects[idx][1];
+//    sum_color.xyz += diffuse_color * (1. - objects[idx][1].w) * ray_color.w;
+    ray_color.xyz *= objects[idx][1].xyz;
 
     // Object reflects ray
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
-    ray_pos += ray_dir * abs(EPS) * 200.;
+//    vec2 rv = (vec2(sin(time+10*ray_pos.x), sin(time+10*ray_pos.y)) + 1) / 2;
+    vec2 rv = vec2(rand(ray_pos), rand(ray_pos * cos(time)));
+    // vec2 rv = vec2(rand(), rand());
+// TODo: remove black area
+//    if (abs(length(dot(ray_dir, obj_norm(ray_pos, idx)))) >  0.4) {
+      ray_dir = randomDirectionInCone(ray_dir, (sin(time * 3) + 3) / 30 * (1-objects[idx][1].w), rv);
+//    }
+
+    ray_pos += ray_dir * abs(EPS) * 2.;
     start_obj = idx;
   }
   // Found no light source
