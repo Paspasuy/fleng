@@ -35,17 +35,17 @@ struct Camera {
   }
   // rot_xz/yaw/рысканье
   void rot_xz(bool positive) {
-    float phi = (positive ? rot_ang : -rot_ang);
+    float phi = (positive ? rot_ang : -rot_ang) * mt_sz / CAM_MATRIX_SIZE;
     camor = mul(camor, get_rot(0, 2, phi));
   }
   // rot_yz/pitch/тангаж
   void rot_yz(bool positive) {
-    float phi = (positive ? rot_ang : -rot_ang);
+    float phi = (positive ? rot_ang : -rot_ang) * mt_sz / CAM_MATRIX_SIZE;
     camor = mul(camor, get_rot(1, 2, phi));
   }
   // rot_xy/roll/крен
   void rot_xy(bool positive) {
-    float phi = (positive ? rot_ang : -rot_ang);
+    float phi = (positive ? rot_ang : -rot_ang) * mt_sz / CAM_MATRIX_SIZE;
     camor = mul(camor, get_rot(0, 1, phi));
   }
 };

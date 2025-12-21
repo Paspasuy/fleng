@@ -17,6 +17,7 @@ signed main() {
   sf::RectangleShape rect(sf::Vector2f(VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
   // rect.setPosition(100, 100);
   rect.setFillColor(sf::Color::Green);
+  window.setMouseCursorVisible(false);
   sf::Shader shader;
   const std::string shader_path = SHADERS_DIR + std::string("fleng.frag");
 
@@ -46,18 +47,20 @@ signed main() {
 
   std::vector<RenderObject*> obj;
   // Shader uses that first object is floor
-  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.4, 0.3, 0.30, 0.90), vec3(0, 1, 0.)));
+  //obj.push_back(new Plane(vec3(0, -1, 0), vec4(1., 0.7, 0.50, 0.90), vec3(0, 1, 0.)));
+  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.4, 0.3, 0.20, 0.99), vec3(0, 1, 0.)));
   //  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.1, 0.1, 0.10, 0.5), vec3(0, 1, 0.4)));
 
   obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
   //  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 0.8), 0.7));
-  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.2, 0.2, 0.2, 0.2), 0.7));
+  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.2, 0.2, 0.2, 0.0), 0.7));
   obj.push_back(new Cuboid(vec3(2, 3.5, 2), vec4(0.4, 1.0, 0.6, 1.), vec3(0.5, 3, 1)));
   obj.push_back(new Cuboid(vec3(5, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
   obj.push_back(new Cuboid(vec3(9, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
 
 
-  obj.push_back(new Sphere(vec3(-5, 2.2, -5), vec4(1.0, 0.2, 0.2, 1.), 0.7));
+  obj.push_back(new Sphere(vec3(-1, 2.2, -1), vec4(1.0, 1.0, 1.0, -5.05), 0.7, true));
+  obj.push_back(new Sphere(vec3(-3, 1.6, 1), vec4(0.4, 0.9, 0.9, -0.05), 0.7, true));
   // obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(1.0, 1.0, 1.0, 0.9), 0.3));
 
   // For perftest in future
@@ -67,7 +70,7 @@ signed main() {
   }
 */
   // Light sources
-  obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(0.0, 1.0, 1.0, -1.0), 0.3));
+  obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(0.99, 1.0, 1.0, -1.0), 0.3));
   obj.push_back(new Cuboid(vec3(-6, 5, 5.), vec4(0.95, 0.75, 0.31, -1.), vec3(0.1, 6, 5)));
 
   // Fractals
@@ -87,7 +90,7 @@ signed main() {
   float fps = 0;
   uint32_t stale = 0;
 
-  bool blur = true;
+  bool blur = false;
   bool paused = 0;
   while (window.isOpen()) {
     if (blur) ++stale;
@@ -166,6 +169,9 @@ signed main() {
     // std::cerr << CLOCKS_PER_SEC << '\n';
     // float time = float(clock())/CLOCKS_PER_SEC;
 //    obj[6]->pos.y = 2.2 + sin(float(time)) * 2;
+//    static_cast<Sphere*>(obj[6])->color.x = (sin(float(time)) - 1) / 2;
+//    static_cast<Sphere*>(obj[6])->color.y = (sin(float(time)) - 1) / 2;
+//    static_cast<Sphere*>(obj[6])->color.w = (sin(float(time * 2)) - 1) / 2 * 0.05 * 100;
     shader.setUniform("time", time);
     // alpha -= int(alpha / M_PI / 2) * M_PI * 2;
     // shader.setUniform("scale", scale);
@@ -190,25 +196,15 @@ signed main() {
 
 
     accumulateShader.setUniform("currentFrame", currentRT.getTexture());
-    std::cout << stale << std::endl;
     accumulateShader.setUniform("previousAccum", accumRT.getTexture());
     accumulateShader.setUniform("invN", 1.f / float(stale + 1));
     accumulateShader.setUniform("prevFactor", float(stale) / float(stale + 1));
 
     accumRT.draw(current, &accumulateShader);
     accumRT.display();
-//
-//    sf::Sprite quad;
-//    quad.setTexture(currentRT.getTexture()); // geometry source only
-//
-//    accumRT.clear(sf::Color::Black);
 
-
-//    window.draw(fullscreen, &shader);
-    // window.draw(current, &accumulateShader);
     window.draw(sf::Sprite(accumRT.getTexture()));
-    //window.draw(sf::Sprite(currentRT.getTexture()));
-    if (fps_clock.getElapsedTime().asSeconds() > 0.2) {
+    if (fps_clock.getElapsedTime().asSeconds() > 0.5) {
       float currentTime = fps_clock.getElapsedTime().asSeconds();
       float fps = frames / currentTime;
       std::cout << "fps: " << fps << std::endl;

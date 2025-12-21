@@ -53,7 +53,7 @@ highp float rand(vec2 co)
 }
 */
 vec3 warp(vec3 pos) {
-  // pos.xz = mod(pos.xz, 3.) - vec2(1.5);
+//  pos.xz = mod(pos.xz, 16.) - vec2(1.5);
   return pos;
 }
 
@@ -169,6 +169,9 @@ float obj_dist(vec3 pos, int j) {
   if (objects[j][2].x == 2.) {
     return cuboid_dist(pos, j);
   }
+  if (objects[j][2].x == 50.) {
+    return sphere_dist(pos, j);
+  }
   if (objects[j][2].x == 100.) {
     return serp_dist(pos, j);
   }
@@ -213,6 +216,9 @@ vec3 obj_norm(vec3 ray_pos, int j) {
   if (objects[j][2].x == 0.) {
     return sphere_norm(ray_pos, j);
   }
+  if (objects[j][2].x == 50.) {
+    return sphere_norm(ray_pos, j);
+  }
   if (objects[j][2].x == 1.) {
     return plane_norm(j);
   }
@@ -239,6 +245,11 @@ float smin(float a, float b, float k) {
 
 vec4 gamma(vec4 color) {
   color = smoothstep(0.0,1.0,color);
+  float white = 9.0;
+  float exposure = 0.3;
+  color *= white * exposure;
+  color = (color * (1.0 + color / white / white)) / (1. + color);
+
   color.x = pow(color.x, 0.45);
   color.y = pow(color.y, 0.45);
   color.z = pow(color.z, 0.45);
@@ -429,32 +440,64 @@ void main()
 
     // Check if this is light source
     if (objects[idx][1].w < 0.) {
-      ray_color.xyz *= objects[idx][1].xyz;
-      sum_color.xyz += ray_color.xyz;// * ray_color.w;
-      gl_FragColor = gamma(sum_color * AO);
-      return;
+      if (objects[idx][2].x != 50.) {
+        ray_color.xyz *= objects[idx][1].xyz;
+        sum_color.xyz += ray_color.xyz;// * ray_color.w;
+        gl_FragColor = gamma(sum_color * AO);
+        return;
+      }
+      // Refracting shpere
     }
 
 //    vec3 diffuse_color = dumb_diffuse_color(ray_pos, ray_dir, idx);
 
     // Object reflects color
 //    sum_color.xyz += diffuse_color * (1. - objects[idx][1].w) * ray_color.w;
-    ray_color.xyz *= objects[idx][1].xyz;
 
-    // Object reflects ray
-    ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
-//    vec2 rv = (vec2(sin(time+10*ray_pos.x), sin(time+10*ray_pos.y)) + 1) / 2;
-    vec2 rv = vec2(rand(ray_pos * sin(time * 13.2347)), rand(ray_pos * cos(time)));
-    // vec2 rv = vec2(rand(ray_pos) * cos(time * 1238.), rand(ray_pos) * sin(time * 3. + 12.));
-    // vec2 rv = vec2(mix(rand(ray_pos), rand(), 0.8), mix(rand(ray_pos), rand(), 0.8));
-    //vec2 rv = vec2(rand(ray_pos), rand(ray_pos));
-    // vec2 rv = vec2(rand(), rand());
-// TODo: remove black area
-    if (abs(length(dot(ray_dir, obj_norm(ray_pos, idx)))) >  0.05) {
-      ray_dir = randomDirectionInCone(ray_dir, (sin(time * 5) + 3) / 30 * (1-objects[idx][1].w), rv);
+    if (objects[idx][2].x != 50.) {
+      ray_color.xyz *= objects[idx][1].xyz;
+      // Reflect ray
+      ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
+  //    vec2 rv = (vec2(sin(time+10*ray_pos.x), sin(time+10*ray_pos.y)) + 1) / 2;
+      vec2 rv = vec2(rand(ray_pos * sin(time * 13.2347)), rand(ray_pos * cos(time)));
+      // vec2 rv = vec2(rand(ray_pos) * cos(time * 1238.), rand(ray_pos) * sin(time * 3. + 12.));
+      // vec2 rv = vec2(mix(rand(ray_pos), rand(), 0.8), mix(rand(ray_pos), rand(), 0.8));
+      //vec2 rv = vec2(rand(ray_pos), rand(ray_pos));
+      // vec2 rv = vec2(rand(), rand());
+  // TODo: remove black area
+//      if (abs(length(dot(ray_dir, obj_norm(ray_pos, idx)))) >  0.05) {
+        // ray_dir = randomDirectionInCone(ray_dir, (sin(time * 5) + 7) / 80 * (1-objects[idx][1].w)  * 2* 1.5707963, rv);
+        ray_dir = randomDirectionInCone(ray_dir, (1-objects[idx][1].w)  * 1.5707963/  3, rv);
+//      }
+
+      ray_pos += ray_dir * abs(EPS) * 30.;
+    } else {
+      // Refract ray
+      vec3 on = obj_norm(ray_pos, idx);
+      vec3 new_ray_dir = refract(ray_dir, on, 1. / (1. - objects[idx][1].w));
+      float k = abs(dot(ray_dir, on));
+//      if (k <  0.65) {
+//        if (rand(ray_pos) * (3 + cos(time)) / 4 < (0.65 - k) * 5)
+//        new_ray_dir = reflect(ray_dir, on);
+//      }
+//      ray_dir = new_ray_dir;
+//      vec3 ray_pos_half = ray_pos + ray_dir * 1. * objects[idx][2].y;
+/*      if (length(ray_pos_half - objects[idx][0].xyz) > objects[idx][2].y) {
+        ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
+        ray_pos += ray_dir * abs(EPS) * 30.;
+      } else {
+      */
+//        vec3 relpos = normalize(ray_pos - objects[idx][0].xyz);
+//        float sina = length(cross(ray_dir, obj_norm(ray_pos, idx)));
+        vec3 to_center = objects[idx][0].xyz - ray_pos;
+        vec3 path_inside = ray_dir * 2 * dot(to_center, ray_dir);
+        ray_pos += path_inside;
+        float coeff = 1 - pow(length(path_inside) / length(to_center) /  2, 2.) /  2;
+        ray_color.xyz *= coeff * objects[idx][1].xyz;
+        ray_dir = new_ray_dir;
+        ray_pos += ray_dir * EPS * 30;
+      //}
     }
-
-    ray_pos += ray_dir * abs(EPS) * 30.;
     start_obj = idx;
   }
   // Found no light source
