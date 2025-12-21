@@ -6,10 +6,11 @@ uniform float mt_sz;
 uniform vec3 cam_pos, cam_dir, xaxis;
 uniform int obj_cnt;
 
+uniform sampler2D video;
+uniform int video_o;
+
 uniform sampler2D image2;
 uniform int image2_o;
-
-
 const float sq2 = 1.4142;
 const float sq3 = 1.73205;
 
@@ -454,9 +455,19 @@ void main()
       vec3 tcol = texture2D(image2, tpos);
       ray_color.xyz *= tcol;
       sum_color.xyz += ray_color.xyz;
-      gl_FragColor = gamma(sum_color * AO);
+      gl_FragColor = sum_color * AO;
       return;
     }
+
+    if (idx == video_o) {
+      vec2 tpos = get_cuboid_tc(idx, ray_pos);
+      vec3 tcol = texture2D(video, tpos);
+      ray_color.xyz *= tcol;
+      sum_color.xyz += ray_color.xyz;
+      gl_FragColor = sum_color * AO;
+      return;
+    }
+
 
 
     // Check if this is light source

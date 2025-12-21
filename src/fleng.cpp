@@ -2,6 +2,7 @@
 #include "bits/stdc++.h"
 
 #include "utils/utils.hpp"
+#include "utils/MP4Player.cpp"
 #include "math.hpp"
 #include "camera.hpp"
 #include <cassert>
@@ -34,6 +35,13 @@ signed main() {
 
   sf::Texture tI2("assets/image.jpg");
   tI2.setSmooth(true);
+
+  MP4Player player;
+  if (!player.initialize("assets/video.mp4")) {
+      std::cerr << "Failed to initialize video player" << std::endl;
+      return -1;
+  }
+  std::unique_ptr<sf::Texture> player_texture;
 
   sf::RenderTexture currentRT;
   sf::RenderTexture accumRT;
@@ -78,6 +86,7 @@ signed main() {
 
   // Textured
   obj.push_back(new Cuboid(vec3(4, 3, -12.), vec4(1.0, 0.0, 0.0, -1.), vec3(5, 3, 0.1)));
+  obj.push_back(new Cuboid(vec3(-8, 3, -12.), vec4(1.0, 0.0, 0.0, -1.), vec3(5, 3, 0.1)));
 
   // Fractals
   //obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
@@ -99,6 +108,7 @@ signed main() {
   bool blur = false;
   bool paused = 0;
   while (window.isOpen()) {
+
     if (blur) ++stale;
     ++frames;
     while (const std::optional event = window.pollEvent()) {
@@ -162,6 +172,8 @@ signed main() {
                 if (sph[2].pos.y > 1.0  || sph[2].pos.y < 0.01) v = -v;
             }*/
 
+    player_texture = player.getNextFrame();
+
     std::vector<sf::Glsl::Mat4> shader_input_objects;
     for (RenderObject* object : obj) {
       shader_input_objects.emplace_back(sf::Glsl::Mat4(object->exportData().data()));
@@ -190,11 +202,18 @@ signed main() {
     shader.setUniform("xaxis", cam.camor.get_x().to_glsl());
     shader.setUniform("obj_cnt", int(shader_input_objects.size()));
     shader.setUniformArray("objects", shader_input_objects.data(), shader_input_objects.size());
-    shader.setUniformArray("obj_indices", important_indices.data(), important_indices.size());
+
+
+//    shader.setUniformArray("obj_indices", important_indices.data(), important_indices.size());
 
     shader.setUniform("image2", tI2);
     shader.setUniform("image2_o", 10);
-    // GLfloat ut = glGetUniformLocation(ProgramObject, "u_time");
+
+//    shader.setUniform("image2", *player_texture);
+//    shader.setUniform("image2_o", 11);
+    shader.setUniform("video", *player_texture);
+    shader.setUniform("video_o", 11);
+     // GLfloat ut = glGetUniformLocation(ProgramObject, "u_time");
     // if (ut != -1)
     // glUniform1f(ut, clock() / CLOCKS_PER_SEC);
 //    window.clear(sf::Color::Black);

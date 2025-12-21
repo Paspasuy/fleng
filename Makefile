@@ -1,6 +1,6 @@
 CC = c++
 CFLAGS = --std=c++20 -Wall -Wextra -pedantic -Wformat=2 -Wfloat-equal -Wlogical-op -Wshift-overflow=2 -Wduplicated-cond -Wcast-qual -Wcast-align 
-LIBS=-lsfml-graphics -lsfml-window -lsfml-system
+LIBS=-lsfml-graphics -lsfml-window -lsfml-system -lavcodec -lavformat -lswscale -lavutil
 
 SRCS = src/fleng.cpp src/math.cpp
 HEADERS = src/utils/*.hpp src/*.cpp src/*.hpp src/objects/*.hpp
