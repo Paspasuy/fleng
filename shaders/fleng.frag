@@ -6,6 +6,10 @@ uniform float mt_sz;
 uniform vec3 cam_pos, cam_dir, xaxis;
 uniform int obj_cnt;
 
+uniform sampler2D image2;
+uniform int image2_o;
+
+
 const float sq2 = 1.4142;
 const float sq3 = 1.73205;
 
@@ -278,6 +282,13 @@ vec3 get_specular_surround(vec3 ray_pos, vec3 ray_dir) {
   return result;
 }
 
+vec2 get_cuboid_tc(int idx, vec3 pos) {
+  vec3 relpos = pos - objects[idx][0].xyz;
+  vec3 rad = objects[idx][2].yzw;
+  return (-relpos.xy / rad.xy + vec2(1.)) / 2;
+//  return vec2(relpos.x / rad.x, relpos.z / rad.z);
+}
+
 
 void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3 ray_dir, inout int idx, int start_obj) {
   for (; citer < MARCH && abs(lastd) > EPS && lastd < INF; ++citer) {
@@ -438,6 +449,16 @@ void main()
       return;
     }
 
+    if (idx == image2_o) {
+      vec2 tpos = get_cuboid_tc(idx, ray_pos);
+      vec3 tcol = texture2D(image2, tpos);
+      ray_color.xyz *= tcol;
+      sum_color.xyz += ray_color.xyz;
+      gl_FragColor = gamma(sum_color * AO);
+      return;
+    }
+
+
     // Check if this is light source
     if (objects[idx][1].w < 0.) {
       if (objects[idx][2].x != 50.) {
@@ -448,7 +469,6 @@ void main()
       }
       // Refracting shpere
     }
-
 //    vec3 diffuse_color = dumb_diffuse_color(ray_pos, ray_dir, idx);
 
     // Object reflects color

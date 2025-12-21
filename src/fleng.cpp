@@ -32,6 +32,9 @@ signed main() {
     return -1;
   }
 
+  sf::Texture tI2("assets/image.jpg");
+  tI2.setSmooth(true);
+
   sf::RenderTexture currentRT;
   sf::RenderTexture accumRT;
 //  sf::RenderTexture prev;
@@ -70,8 +73,11 @@ signed main() {
   }
 */
   // Light sources
-  obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(0.99, 1.0, 1.0, -1.0), 0.3));
+  obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(0.0, 1.0, 1.0, -1.0), 0.3));
   obj.push_back(new Cuboid(vec3(-6, 5, 5.), vec4(0.95, 0.75, 0.31, -1.), vec3(0.1, 6, 5)));
+
+  // Textured
+  obj.push_back(new Cuboid(vec3(4, 3, -12.), vec4(1.0, 0.0, 0.0, -1.), vec3(5, 3, 0.1)));
 
   // Fractals
   //obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
@@ -185,6 +191,9 @@ signed main() {
     shader.setUniform("obj_cnt", int(shader_input_objects.size()));
     shader.setUniformArray("objects", shader_input_objects.data(), shader_input_objects.size());
     shader.setUniformArray("obj_indices", important_indices.data(), important_indices.size());
+
+    shader.setUniform("image2", tI2);
+    shader.setUniform("image2_o", 10);
     // GLfloat ut = glGetUniformLocation(ProgramObject, "u_time");
     // if (ut != -1)
     // glUniform1f(ut, clock() / CLOCKS_PER_SEC);
