@@ -21,13 +21,13 @@ signed main() {
   const std::string shader_path = SHADERS_DIR + std::string("fleng.frag");
 
   if (!shader.loadFromFile(shader_path, sf::Shader::Type::Fragment)) {
-    std::cerr << "YOU SUCKED(\n";
+    std::cerr << "Failed to load shader\n";
     return -1;
   }
 
   sf::Shader accumulateShader;
   if (!accumulateShader.loadFromFile(SHADERS_DIR + std::string("accumulate.frag"), sf::Shader::Type::Fragment)) {
-    std::cerr << "YOU SUCKED(\n";
+    std::cerr << "Failed to load shader\n";
     return -1;
   }
 
@@ -46,7 +46,7 @@ signed main() {
 
   std::vector<RenderObject*> obj;
   // Shader uses that first object is floor
-  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.1, 0.1, 0.10, 0.9), vec3(0, 1, 0.)));
+  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.4, 0.3, 0.30, 0.90), vec3(0, 1, 0.)));
   //  obj.push_back(new Plane(vec3(0, -1, 0), vec4(0.1, 0.1, 0.10, 0.5), vec3(0, 1, 0.4)));
 
   obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
@@ -68,7 +68,7 @@ signed main() {
 */
   // Light sources
   obj.push_back(new Sphere(vec3(1, 2.5, 1), vec4(0.0, 1.0, 1.0, -1.0), 0.3));
-  obj.push_back(new Cuboid(vec3(-6, 5, 5.), vec4(0.95, 0.55, 0.31, -1.), vec3(0.1, 6, 5)));
+  obj.push_back(new Cuboid(vec3(-6, 5, 5.), vec4(0.95, 0.75, 0.31, -1.), vec3(0.1, 6, 5)));
 
   // Fractals
   //obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));

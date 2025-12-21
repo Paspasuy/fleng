@@ -223,7 +223,7 @@ vec3 obj_norm(vec3 ray_pos, int j) {
 }
 
 // const vec2 viewport = vec2(800, 800);
-const vec3 sky = vec3(0.2, 0.3, 0.5);
+const vec3 sky = vec3(0.4, 0.6, 0.95);
 const vec3 sun = vec3(1.0, 1.0, 0.4);
 const float mt_dist = 0.001;
 const float INF = 1000.;
@@ -238,6 +238,7 @@ float smin(float a, float b, float k) {
 }
 
 vec4 gamma(vec4 color) {
+  color = smoothstep(0.0,1.0,color);
   color.x = pow(color.x, 0.45);
   color.y = pow(color.y, 0.45);
   color.z = pow(color.z, 0.45);
