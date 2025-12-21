@@ -443,9 +443,10 @@ void main()
     // Object reflects ray
     ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
 //    vec2 rv = (vec2(sin(time+10*ray_pos.x), sin(time+10*ray_pos.y)) + 1) / 2;
-    // vec2 rv = vec2(rand(ray_pos), rand(ray_pos * cos(time)));
+    vec2 rv = vec2(rand(ray_pos * sin(time * 13.2347)), rand(ray_pos * cos(time)));
     // vec2 rv = vec2(rand(ray_pos) * cos(time * 1238.), rand(ray_pos) * sin(time * 3. + 12.));
-    vec2 rv = vec2(mix(rand(ray_pos), rand(), 0.8), mix(rand(ray_pos), rand(), 0.2));
+    // vec2 rv = vec2(mix(rand(ray_pos), rand(), 0.8), mix(rand(ray_pos), rand(), 0.8));
+    //vec2 rv = vec2(rand(ray_pos), rand(ray_pos));
     // vec2 rv = vec2(rand(), rand());
 // TODo: remove black area
     if (abs(length(dot(ray_dir, obj_norm(ray_pos, idx)))) >  0.05) {
@@ -456,8 +457,8 @@ void main()
     start_obj = idx;
   }
   // Found no light source
-//  gl_FragColor = sum_color;//vec4(1.);
-  gl_FragColor = vec4(1.);
+  gl_FragColor = sum_color;//vec4(1.);
+//  gl_FragColor = vec4(1.);
   return;
 }
 

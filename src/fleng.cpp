@@ -51,7 +51,7 @@ signed main() {
 
   obj.push_back(new Sphere(vec3(2, 2.2, 0), vec4(1.0, 0.6, 0.8, 1.), 0.7));
   //  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.5, 0.7, 1., 0.8), 0.7));
-  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.2, 0.2, 0.2, 0.5), 0.7));
+  obj.push_back(new Sphere(vec3(0, 1.7, 1), vec4(0.2, 0.2, 0.2, 0.2), 0.7));
   obj.push_back(new Cuboid(vec3(2, 3.5, 2), vec4(0.4, 1.0, 0.6, 1.), vec3(0.5, 3, 1)));
   obj.push_back(new Cuboid(vec3(5, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
   obj.push_back(new Cuboid(vec3(9, 5, 5), vec4(0.7, 0.8, 0.95, 1.), 1.8));
@@ -73,7 +73,7 @@ signed main() {
   // Fractals
   //obj.push_back(new FractalCube(vec4(0.0, 1.0, 0.5, 1.)));
   //obj.push_back(new SerpinskyTetrahedron(vec4(1.0, 0.7, 0.0, 1.)));
-  //obj.push_back(new MandelBulb(vec3(-0.7, 2, 3.5), vec4(0.9, 0.2, 0.2, 1.)));
+  obj.push_back(new MandelBulb(vec3(-0.7, 2, 3.5), vec4(0.9, 0.2, 0.2, 1.)));
 
   Camera cam;
 
@@ -87,7 +87,7 @@ signed main() {
   float fps = 0;
   uint32_t stale = 0;
 
-  bool blur = false;
+  bool blur = true;
   bool paused = 0;
   while (window.isOpen()) {
     if (blur) ++stale;
@@ -165,7 +165,7 @@ signed main() {
     float time = elapsed.asSeconds();
     // std::cerr << CLOCKS_PER_SEC << '\n';
     // float time = float(clock())/CLOCKS_PER_SEC;
-    obj[6]->pos.y = 2.2 + sin(float(time)) * 2;
+//    obj[6]->pos.y = 2.2 + sin(float(time)) * 2;
     shader.setUniform("time", time);
     // alpha -= int(alpha / M_PI / 2) * M_PI * 2;
     // shader.setUniform("scale", scale);
