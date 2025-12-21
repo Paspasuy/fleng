@@ -17,7 +17,7 @@ private:
     AVFormatContext* format_ctx = nullptr;
     AVCodecContext* codec_ctx = nullptr;
     AVFrame* frame = nullptr;
-    AVFrame* rgb_frame = nullptr;
+    AVFrame* rgba_frame = nullptr;
     AVPacket* packet = nullptr;
     SwsContext* sws_ctx = nullptr;
     
@@ -26,7 +26,7 @@ private:
     bool initialized = false;
     
     // Buffer for RGB data
-    uint8_t* rgb_buffer = nullptr;
+    uint8_t* rgba_buffer = nullptr;
     
 public:
     MP4Player() = default;
@@ -94,67 +94,68 @@ public:
         
         // Allocate frames
         frame = av_frame_alloc();
-        rgb_frame = av_frame_alloc();
+
+                rgba_frame = av_frame_alloc();
         packet = av_packet_alloc();
-        
-        if (!frame || !rgb_frame || !packet) {
+
+        if (!frame || !rgba_frame || !packet) {
             std::cerr << "Error: Could not allocate frames/packet" << std::endl;
             return false;
         }
-        
-        // Prepare RGB buffer
-        int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, 
-                                                   codec_ctx->width, 
-                                                   codec_ctx->height, 
+
+        // Prepare RGBA buffer for SFML (32-bit RGBA)
+        int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_RGBA,
+                                                   codec_ctx->width,
+                                                   codec_ctx->height,
                                                    1);
-        rgb_buffer = (uint8_t*)av_malloc(buffer_size * sizeof(uint8_t));
-        
-        if (!rgb_buffer) {
-            std::cerr << "Error: Could not allocate RGB buffer" << std::endl;
+        rgba_buffer = (uint8_t*)av_malloc(buffer_size * sizeof(uint8_t));
+
+        if (!rgba_buffer) {
+            std::cerr << "Error: Could not allocate RGBA buffer" << std::endl;
             return false;
         }
-        
-        // Setup RGB frame
-        av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize,
-                            rgb_buffer, AV_PIX_FMT_RGB24,
+
+        // Setup RGBA frame
+        av_image_fill_arrays(rgba_frame->data, rgba_frame->linesize,
+                            rgba_buffer, AV_PIX_FMT_RGBA,
                             codec_ctx->width, codec_ctx->height, 1);
-        
+
         // Initialize SWSCALE context for color space conversion
         sws_ctx = sws_getContext(codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt,
-                                 codec_ctx->width, codec_ctx->height, AV_PIX_FMT_RGB24,
+                                 codec_ctx->width, codec_ctx->height, AV_PIX_FMT_RGBA,
                                  SWS_BILINEAR, nullptr, nullptr, nullptr);
-        
+
         if (!sws_ctx) {
             std::cerr << "Error: Could not initialize SWSCALE context" << std::endl;
             return false;
         }
-        
+
         std::cout << "Video loaded: " << filename << std::endl;
         std::cout << "Dimensions: " << codec_ctx->width << "x" << codec_ctx->height << std::endl;
         std::cout << "FPS: " << av_q2d(format_ctx->streams[video_stream_index]->avg_frame_rate) << std::endl;
-        
+
         initialized = true;
         return true;
     }
-    
+
     std::unique_ptr<sf::Texture> getNextFrame() {
-        if (!initialized || eof_reached) {
+        if (!initialized) {
             return nullptr;
         }
-        
+
         bool frame_decoded = false;
-        
+
         while (!frame_decoded) {
             // Read packet from stream
             int ret = av_read_frame(format_ctx, packet);
-            
+
             if (ret < 0) {
-                // End of file or error, seek to beginning
+                // End of file or error, seek to beginning for looping
                 av_seek_frame(format_ctx, video_stream_index, 0, AVSEEK_FLAG_FRAME);
-                eof_reached = false;
-                continue;
+                eof_reached = true;
+                return nullptr; // Signal that we reached EOF
             }
-            
+
             // Check if packet is from video stream
             if (packet->stream_index == video_stream_index) {
                 // Send packet to decoder
@@ -163,23 +164,22 @@ public:
                     av_packet_unref(packet);
                     continue;
                 }
-                
+
                 // Receive frame from decoder
                 ret = avcodec_receive_frame(codec_ctx, frame);
                 if (ret == 0) {
                     frame_decoded = true;
-                    
-                    // Convert frame to RGB
+
+                    // Convert frame to RGBA (32-bit for SFML)
                     sws_scale(sws_ctx, frame->data, frame->linesize,
                               0, codec_ctx->height,
-                              rgb_frame->data, rgb_frame->linesize);
+                              rgba_frame->data, rgba_frame->linesize);
                 } else if (ret == AVERROR(EAGAIN)) {
                     // Need more data
                     av_packet_unref(packet);
                     continue;
                 }
             }
-            
             av_packet_unref(packet);
         }
         
@@ -190,7 +190,7 @@ public:
             return nullptr;
         }
         
-        texture->update(rgb_buffer);
+        texture->update(rgba_buffer);
         return texture;
     }
     
@@ -225,17 +225,17 @@ private:
             sws_ctx = nullptr;
         }
         
-        if (rgb_buffer) {
-            av_free(rgb_buffer);
-            rgb_buffer = nullptr;
+        if (rgba_buffer) {
+            av_free(rgba_buffer);
+            rgba_buffer = nullptr;
         }
         
         if (frame) {
             av_frame_free(&frame);
         }
         
-        if (rgb_frame) {
-            av_frame_free(&rgb_frame);
+        if (rgba_frame) {
+            av_frame_free(&rgba_frame);
         }
         
         if (packet) {
