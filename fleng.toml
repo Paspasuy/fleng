@@ -1,0 +1,22 @@
+# fleng settings. Read at startup from the working directory,
+# or pass another file: ./build/release/fleng my.toml
+# Anything left out falls back to the built-in default.
+
+[window]
+width = 500
+height = 500
+framerate_limit = 60
+title = "fleng"
+
+[paths]
+shaders = "shaders/"
+image = "assets/image.jpg"
+video = "assets/video.mp4"
+
+[render]
+march_iterations = 200   # starting value; 3 / 4 keys change it live
+
+[camera]
+matrix_size = 0.001      # smaller = narrower field of view; - / = keys change it live
+speed = 0.2              # 5 / 6 keys divide / multiply by 10
+rotation_angle = 0.05    # radians per frame while an arrow key is held

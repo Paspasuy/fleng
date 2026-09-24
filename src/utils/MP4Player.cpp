@@ -185,7 +185,7 @@ public:
         
         // Create SFML texture from RGB data
         auto texture = std::make_unique<sf::Texture>();
-        if (!texture->resize({codec_ctx->width, codec_ctx->height})) {
+        if (!texture->resize({static_cast<unsigned>(codec_ctx->width), static_cast<unsigned>(codec_ctx->height)})) {
             std::cerr << "Error: Could not create SFML texture" << std::endl;
             return nullptr;
         }

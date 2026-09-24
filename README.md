@@ -2,7 +2,8 @@
 
 ## How to build & run
 1. Install SFML
-2. `make prepare && make`
+2. `make`
+3. Settings live in `fleng.toml` (read from the working directory, or pass a path: `./build/release/fleng my.toml`)
 
 ## License
 Absolutely closed-source. Looking into the source code is **STRICTLY PROHIBITED**.

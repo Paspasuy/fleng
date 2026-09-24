@@ -2,6 +2,13 @@ CC = c++
 CFLAGS = --std=c++20 -Wall -Wextra -pedantic -Wformat=2 -Wfloat-equal -Wlogical-op -Wshift-overflow=2 -Wduplicated-cond -Wcast-qual -Wcast-align 
 LIBS=-lsfml-graphics -lsfml-window -lsfml-system -lavcodec -lavformat -lswscale -lavutil
 
+# Homebrew installs outside the default search paths on macOS
+BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
+ifneq ($(BREW_PREFIX),)
+CFLAGS += -I$(BREW_PREFIX)/include
+LIBS += -L$(BREW_PREFIX)/lib
+endif
+
 SRCS = src/fleng.cpp src/math.cpp
 HEADERS = src/utils/*.hpp src/*.cpp src/*.hpp src/objects/*.hpp
 
@@ -28,6 +35,7 @@ $(DBGEXE): $(DBGOBJS)
 	$(CC) $(CFLAGS) $(DBGCFLAGS) $(LIBS) -o $(DBGEXE) $^
 
 $(DBGDIR)/%.o: %.cpp $(HEADERS)
+	@mkdir -p $(@D)
 	$(CC) -c $(CFLAGS) $(DBGCFLAGS) -o $@ $<
 
 release: $(RELEXE)
@@ -36,6 +44,7 @@ $(RELEXE): $(RELOBJS)
 	$(CC) $(CFLAGS) $(RELCFLAGS) $(LIBS) -o $(RELEXE) $^
 
 $(RELDIR)/%.o: %.cpp $(HEADERS)
+	@mkdir -p $(@D)
 	$(CC) -c $(CFLAGS) $(RELCFLAGS) -o $@ $<
 
 run:

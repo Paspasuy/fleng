@@ -1,6 +1,14 @@
 #include <SFML/Graphics.hpp>
-#include "bits/stdc++.h"
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <memory>
+#include <numeric>
+#include <optional>
+#include <string>
+#include <vector>
 
+#include "utils/config.hpp"
 #include "utils/utils.hpp"
 #include "utils/MP4Player.cpp"
 #include "math.hpp"
@@ -10,17 +18,22 @@
 
 // #include <GL/glew.h>
 
-signed main() {
+signed main(int argc, char** argv) {
+  if (!load_config(argc > 1 ? argv[1] : "fleng.toml", config)) {
+    return -1;
+  }
+  const sf::Vector2u viewport(config.window_width, config.window_height);
+
   // sf::Glsl::Mat4 *mtx;// = new sf::Glsl::Mat4[2];
-  sf::RenderWindow window(sf::VideoMode({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}),
-                          APP_TITLE);  //, sf::Style::Fullscreen);
-  window.setFramerateLimit(FRAMERATE_LIMIT);
-  sf::RectangleShape rect(sf::Vector2f(VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
+  sf::RenderWindow window(sf::VideoMode(viewport),
+                          sf::String::fromUtf8(config.window_title.begin(), config.window_title.end()));  //, sf::Style::Fullscreen);
+  window.setFramerateLimit(config.window_framerate_limit);
+  sf::RectangleShape rect{sf::Vector2f(viewport)};
   // rect.setPosition(100, 100);
   rect.setFillColor(sf::Color::Green);
   window.setMouseCursorVisible(false);
   sf::Shader shader;
-  const std::string shader_path = SHADERS_DIR + std::string("fleng.frag");
+  const std::string shader_path = config.paths_shaders + "fleng.frag";
 
   if (!shader.loadFromFile(shader_path, sf::Shader::Type::Fragment)) {
     std::cerr << "Failed to load shader\n";
@@ -28,18 +41,18 @@ signed main() {
   }
 
   sf::Shader accumulateShader;
-  if (!accumulateShader.loadFromFile(SHADERS_DIR + std::string("accumulate.frag"), sf::Shader::Type::Fragment)) {
+  if (!accumulateShader.loadFromFile(config.paths_shaders + "accumulate.frag", sf::Shader::Type::Fragment)) {
     std::cerr << "Failed to load shader\n";
     return -1;
   }
 
-  sf::Texture tI2("assets/image.jpg");
+  sf::Texture tI2(config.paths_image);
   tI2.setSmooth(true);
 
   MP4Player player;
-  if (!player.initialize("assets/video.mp4")) {
+  if (!player.initialize(config.paths_video)) {
       std::cerr << "Failed to initialize video player" << std::endl;
-      return -1;
+      // return -1;
   }
   std::unique_ptr<sf::Texture> player_texture;
 
@@ -47,9 +60,9 @@ signed main() {
   sf::RenderTexture accumRT;
 //  sf::RenderTexture prev;
 
-  assert(currentRT.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
-  assert(accumRT.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
-//  assert(prev.resize({VIEWPORT_WIDTH, VIEWPORT_HEIGHT}));
+  assert(currentRT.resize(viewport));
+  assert(accumRT.resize(viewport));
+//  assert(prev.resize(viewport));
 
   sf::Sprite current(currentRT.getTexture());
   sf::Sprite prev(accumRT.getTexture());
@@ -99,7 +112,7 @@ signed main() {
   sf::Clock fps_clock;
   float last_time = 0;
 
-  int MARCH = INITIAL_MARCH_ITERATIONS;
+  int MARCH = config.render_march_iterations;
 
   int frames = 0;
   float fps = 0;

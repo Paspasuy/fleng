@@ -1,3 +1,4 @@
+#version 120
 const int SZ = 110;
 uniform mat4 objects[SZ];
 uniform mat4 obj_indices[SZ];
@@ -14,8 +15,10 @@ uniform int image2_o;
 const float sq2 = 1.4142;
 const float sq3 = 1.73205;
 
-uint seed;
 float last_time;
+
+/* uint needs GLSL 1.30; macOS SFML only gets a GLSL 1.20 context
+uint seed;
 
 void initSeed()
 {
@@ -29,6 +32,7 @@ float rand()
     seed = seed * 1664525u + 1013904223u; // LCG
     return float(seed) / 4294967296.0;
 }
+*/
 
 
 float rand(vec2 co) {
@@ -344,7 +348,7 @@ vec3 get_surround_for_far(vec3 ray_pos, vec3 ray_dir) {
 
 
 vec3 dumb_diffuse_color(vec3 ray_pos, vec3 ray_dir, int obj_idx) {
-  vec3 color = 0.;
+  vec3 color = vec3(0.);
   vec3 surface_norm = obj_norm(ray_pos, obj_idx);
   for (int j = 0; j < obj_cnt; ++j) {
     if (j == obj_idx) continue;
@@ -402,7 +406,6 @@ vec3 randomDirectionInCone(vec3 dir, float alpha, vec2 rnd)
 
 void main()
 {
-  seed = time;
   vec3 yaxis = cross(cam_dir, xaxis);
   vec2 xy = (gl_TexCoord[0].xy - 0.5) * mt_sz;
 
@@ -444,7 +447,7 @@ void main()
 
     // Failed approaching to any object — either sky or floor
     if (citer == MARCH) {
-      sum_color.xyz += ray_color * get_surround_for_far(ray_pos, ray_dir);// * ray_color.w;
+      sum_color.xyz += ray_color.xyz * get_surround_for_far(ray_pos, ray_dir);// * ray_color.w;
       gl_FragColor = gamma(sum_color * AO);
 //      gl_FragColor = vec4(0.);
       return;
@@ -452,7 +455,7 @@ void main()
 
     if (idx == image2_o) {
       vec2 tpos = get_cuboid_tc(idx, ray_pos);
-      vec3 tcol = texture2D(image2, tpos);
+      vec3 tcol = texture2D(image2, tpos).rgb;
       ray_color.xyz *= tcol;
       sum_color.xyz += ray_color.xyz;
       gl_FragColor = sum_color * AO;
@@ -461,7 +464,7 @@ void main()
 
     if (idx == video_o) {
       vec2 tpos = get_cuboid_tc(idx, ray_pos);
-      vec3 tcol = texture2D(video, tpos);
+      vec3 tcol = texture2D(video, tpos).rgb;
       ray_color.xyz *= tcol;
       sum_color.xyz += ray_color.xyz;
       gl_FragColor = sum_color * AO;
@@ -490,7 +493,7 @@ void main()
       // Reflect ray
       ray_dir = reflect(ray_dir, obj_norm(ray_pos, idx));
   //    vec2 rv = (vec2(sin(time+10*ray_pos.x), sin(time+10*ray_pos.y)) + 1) / 2;
-      vec2 rv = vec2(rand(ray_pos * sin(time * 13.2347)), rand(ray_pos * cos(time)));
+      vec2 rv = vec2(rand(ray_pos.xy * sin(time * 13.2347)), rand(ray_pos.xy * cos(time)));
       // vec2 rv = vec2(rand(ray_pos) * cos(time * 1238.), rand(ray_pos) * sin(time * 3. + 12.));
       // vec2 rv = vec2(mix(rand(ray_pos), rand(), 0.8), mix(rand(ray_pos), rand(), 0.8));
       //vec2 rv = vec2(rand(ray_pos), rand(ray_pos));

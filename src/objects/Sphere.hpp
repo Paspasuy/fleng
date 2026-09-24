@@ -17,7 +17,7 @@ class Sphere : public RenderObject {
   }
 
   std::array<float, 16> exportData() override {
-    return {pos.x, pos.y, pos.z, 0, color.x, color.y, color.z, color.w, refracting ? ObjectType::REFRACTING_SPHERE: ObjectType::SPHERE, prop.x, 0, 0, 0, 0, 0, 0};
+    return {pos.x, pos.y, pos.z, 0, color.x, color.y, color.z, color.w, static_cast<float>(refracting ? ObjectType::REFRACTING_SPHERE : ObjectType::SPHERE), prop.x, 0, 0, 0, 0, 0, 0};
   }
   float dist(vec3 point) override {
     return pos.dist(point) - prop.x;
