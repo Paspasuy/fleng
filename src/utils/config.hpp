@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cctype>
 #include <cerrno>
 #include <climits>
@@ -26,6 +27,22 @@ struct Config {
   float camera_matrix_size = 0.001;
   float camera_speed = 0.2;
   float camera_rotation_angle = 0.05;
+  std::array<float, 3> camera_position = {1, 2, -3};
+  std::array<float, 3> camera_look_at = {1, 2, -2};
+
+  bool water_enabled = true;
+  std::string water_scene = "drop";
+  unsigned water_resolution = 32;
+  // Never run the simulation ahead of the wall clock. When it can't keep up, the
+  // water plays in slow motion either way.
+  bool water_realtime = true;
+  // World position of the middle of the tank's floor, and world units per meter.
+  std::array<float, 3> water_position = {-0.5f, -1.0f, 5.0f};
+  float water_scale = 10;
+  // Beer–Lambert absorption per meter of water for red, green, blue. Default:
+  // measured values for pure water (Pope & Fry 1997, at 650/550/450 nm).
+  std::array<float, 3> water_absorption = {0.34f, 0.057f, 0.0092f};
+  float water_ior = 1.33f;
 };
 
 inline Config config;
@@ -90,6 +107,35 @@ inline bool parse_value(const std::string& raw, float& out) {
   return true;
 }
 
+inline bool parse_value(const std::string& raw, bool& out) {
+  if (raw == "true" || raw == "false") {
+    out = raw == "true";
+    return true;
+  }
+  return false;
+}
+
+// "[a, b, c]": exactly three numbers.
+inline bool parse_value(const std::string& raw, std::array<float, 3>& out) {
+  if (raw.size() < 2 || raw.front() != '[' || raw.back() != ']') {
+    return false;
+  }
+  std::array<float, 3> values;
+  size_t start = 1;
+  for (size_t n = 0; n < 3; ++n) {
+    size_t end = raw.find(n < 2 ? ',' : ']', start);
+    if (end == std::string::npos || !parse_value(trim(raw.substr(start, end - start)), values[n])) {
+      return false;
+    }
+    start = end + 1;
+  }
+  if (start != raw.size()) {
+    return false;
+  }
+  out = values;
+  return true;
+}
+
 inline bool parse_value(const std::string& raw, std::string& out) {
   if (raw.size() < 2 || raw.front() != '"' || raw.back() != '"') {
     return false;
@@ -103,7 +149,7 @@ inline bool parse_value(const std::string& raw, std::string& out) {
 // Returns false (after printing why) if the file exists but is malformed. A missing file just means defaults.
 inline bool load_config(const std::string& path, Config& cfg) {
   using namespace config_detail;
-  using Field = std::variant<unsigned*, int*, float*, std::string*>;
+  using Field = std::variant<unsigned*, int*, float*, bool*, std::array<float, 3>*, std::string*>;
   const std::map<std::string, Field> fields = {
       {"window.width", &cfg.window_width},
       {"window.height", &cfg.window_height},
@@ -116,6 +162,16 @@ inline bool load_config(const std::string& path, Config& cfg) {
       {"camera.matrix_size", &cfg.camera_matrix_size},
       {"camera.speed", &cfg.camera_speed},
       {"camera.rotation_angle", &cfg.camera_rotation_angle},
+      {"camera.position", &cfg.camera_position},
+      {"camera.look_at", &cfg.camera_look_at},
+      {"water.enabled", &cfg.water_enabled},
+      {"water.scene", &cfg.water_scene},
+      {"water.resolution", &cfg.water_resolution},
+      {"water.realtime", &cfg.water_realtime},
+      {"water.position", &cfg.water_position},
+      {"water.scale", &cfg.water_scale},
+      {"water.absorption", &cfg.water_absorption},
+      {"water.ior", &cfg.water_ior},
   };
 
   std::ifstream in(path);

@@ -12,6 +12,19 @@ uniform int video_o;
 
 uniform sampler2D image2;
 uniform int image2_o;
+
+// Simulated water (src/water.hpp): signed distance to the water surface in
+// meters (negative inside) on a 3D grid whose corner sits at water_min and
+// which spans water_size in world units.
+uniform sampler3D water_phi;
+uniform int water_on;
+uniform vec3 water_min;
+uniform vec3 water_size;
+uniform float water_scale;   // world units per meter
+uniform vec3 water_texel;    // 1 / grid cells per axis
+uniform vec3 water_absorb;   // Beer–Lambert absorption per world unit, per channel
+uniform float water_ior;
+const int WATER = 1000;      // object index of the water in the march loops
 const float sq2 = 1.4142;
 const float sq3 = 1.73205;
 
@@ -192,6 +205,43 @@ float obj_dist(vec3 pos, int j) {
   }
 }
 
+// Distance to the water surface, in world units (negative inside the water).
+// Outside the grid's box the box distance is a safe lower bound. Inside, the
+// field is a first-order distance that can overestimate by ~8%, so march 0.9×.
+float water_dist(vec3 p) {
+  vec3 half_size = 0.5 * water_size;
+  vec3 q = abs(p - (water_min + half_size)) - half_size;
+  float box = length(max(q, 0.)) + min(max(q.x, max(q.y, q.z)), 0.);
+  if (box > 0.) return box + 0.5 * water_texel.x * water_size.x;
+  return 0.9 * texture3D(water_phi, (p - water_min) / water_size).r * water_scale;
+}
+
+// Hit tolerance for the water surface: 2% of a grid cell. GPUs interpolate
+// textures with limited-precision weights, so the sampled field is slightly
+// stair-stepped below that scale and a tighter tolerance never converges.
+float water_eps() {
+  return 0.02 * water_texel.x * water_size.x;
+}
+
+// Outward surface normal: the gradient of the distance field.
+vec3 water_normal(vec3 p) {
+  vec3 uvw = (p - water_min) / water_size;
+  vec3 h = water_texel;
+  vec3 g = vec3(
+      texture3D(water_phi, uvw + vec3(h.x, 0., 0.)).r - texture3D(water_phi, uvw - vec3(h.x, 0., 0.)).r,
+      texture3D(water_phi, uvw + vec3(0., h.y, 0.)).r - texture3D(water_phi, uvw - vec3(0., h.y, 0.)).r,
+      texture3D(water_phi, uvw + vec3(0., 0., h.z)).r - texture3D(water_phi, uvw - vec3(0., 0., h.z)).r);
+  g /= h * water_size;  // per world unit
+  return length(g) > 0. ? normalize(g) : vec3(0., 1., 0.);
+}
+
+// Schlick's approximation of the Fresnel reflectance for water.
+float water_fresnel(float cos_theta) {
+  float r0 = (1. - water_ior) / (1. + water_ior);
+  r0 *= r0;
+  return r0 + (1. - r0) * pow(1. - clamp(cos_theta, 0., 1.), 5.);
+}
+
 vec3 sphere_norm(vec3 ray_pos, int j) {
   return normalize(warp(ray_pos) - objects[j][0].xyz);
 }
@@ -298,6 +348,10 @@ vec2 get_cuboid_tc(int idx, vec3 pos) {
 void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3 ray_dir, inout int idx, int start_obj) {
   for (; citer < MARCH && abs(lastd) > EPS && lastd < INF; ++citer) {
     float dist = INF;
+    if (water_on == 1) {
+      dist = water_dist(ray_pos);
+      idx = WATER;
+    }
     if (start_obj == -1) {
       for (int j = 0; j < obj_cnt; ++j) {
         float nd = obj_dist(warp(ray_pos), j);
@@ -316,6 +370,10 @@ void raymarch(inout int citer, inout float lastd, inout vec3 ray_pos, inout vec3
           idx = j;
         }
       }
+    }
+    if (idx == WATER && dist < water_eps()) {
+      lastd = 0.;
+      break;
     }
     ray_pos += ray_dir * dist;
     lastd = dist;
@@ -432,6 +490,62 @@ void main()
       ray_color.xyz *= get_sky(ray_dir).xyz;
       sum_color.xyz += ray_color.xyz;// * ray_color.w;
       //sum_color.xyz += get_surround_for_far(ray_pos, ray_dir) * ray_color.w;
+      gl_FragColor = gamma(sum_color * AO);
+      return;
+    }
+
+    if (idx == WATER && citer < MARCH) {
+      // Water surface. Reflection: only the sky and floor, weighted by Fresnel
+      // (cheap and noise-free). The rest refracts in, travels through the water
+      // losing color (Beer–Lambert), and refracts out where it leaves.
+      vec3 n = water_normal(ray_pos);
+      // At grazing hits the field's gradient can face away from the ray.
+      if (dot(ray_dir, n) > 0.) n = -n;
+      float fr = water_fresnel(-dot(ray_dir, n));
+      sum_color.xyz += ray_color.xyz * fr * get_specular_surround(ray_pos, reflect(ray_dir, n));
+      ray_color.xyz *= 1. - fr;
+
+      // Step clearly past the hit tolerance so the ray really starts inside.
+      float step_off = 3. * water_eps();
+      vec3 d = refract(ray_dir, n, 1. / water_ior);
+      vec3 p = ray_pos - n * step_off;
+      float travelled = 0.;
+      for (int bounce = 0; bounce < 4; ++bounce) {
+        // March to where the ray leaves the water. It must first get clear of
+        // the surface it came through: without that, a spot where the field
+        // underestimates depth ends the march at once, the ray is pushed back
+        // out, hits the same surface again, and loops until its bounces run out.
+        float segment = 0.;
+        for (int i = 0; i < 128; ++i) {
+          float t = -water_dist(p);
+          if (t < water_eps() && segment > 2. * step_off) break;
+          t = max(t, water_eps());
+          p += d * t;
+          segment += t;
+        }
+        travelled += segment;
+        vec3 n_out = water_normal(p);
+        if (dot(d, n_out) < 0.) n_out = -n_out;
+        vec3 out_dir = refract(d, -n_out, water_ior);
+        if (dot(out_dir, out_dir) > 0.) {
+          ray_color.xyz *= 1. - water_fresnel(dot(out_dir, n_out));
+          d = out_dir;
+          p += n_out * step_off;
+          break;
+        }
+        // Total internal reflection: stay inside and keep going.
+        d = reflect(d, -n_out);
+        p -= n_out * step_off;
+      }
+      ray_color.xyz *= exp(-water_absorb * travelled);
+      ray_pos = p;
+      ray_dir = d;
+      start_obj = -1;
+      continue;
+    }
+    if (idx == WATER) {
+      // The march ran out of steps near the water: treat like any far miss.
+      sum_color.xyz += ray_color.xyz * get_surround_for_far(ray_pos, ray_dir);
       gl_FragColor = gamma(sum_color * AO);
       return;
     }

@@ -35,6 +35,14 @@ iterations, leftover divergence, water volume, and energy. Options:
 (u32) and `dx` (f32), then `nx·ny·nz` f32 values, x varying fastest,
 little-endian. φ is negative inside the water.
 
+## Using it from C or C++
+
+`zig build` also produces `zig-out/lib/libfleng_sim.a`, with the interface in
+[include/fleng_sim.h](include/fleng_sim.h): create a scene, advance it frame by
+frame, and copy out the water surface as a signed distance field. fleng's
+Makefile builds and links it (see `src/water.hpp`). The library links libc and
+leaves signal handling to the host program.
+
 ## Code map
 
 | File | Lesson | What it does |
@@ -48,11 +56,12 @@ little-endian. φ is negative inside the water.
 | `extrapolate.zig` | 5 | Velocity extrapolation into the air |
 | `cg.zig` | 6 | (Preconditioned) Conjugate Gradient |
 | `multigrid.zig` | 6 | Symmetric geometric multigrid V-cycle (the MGPCG preconditioner) |
-| `surface.zig` | 7 | Zhu–Bridson level set from particles, FLUID/AIR labels |
+| `surface.zig` | 7 | Zhu–Bridson level set from particles, FLUID/AIR labels, redistancing by fast sweeping |
 | `validate.zig` | 8 | Scenario checks |
 | `scenes.zig` | | Still tank, dam break, drop |
 | `pool.zig` | | Deterministic parallel-for on a persistent worker pool |
 | `main.zig` | | Command-line runner |
+| `capi.zig` | | C interface for the engine |
 
 ## Measured results (MacBook Air M4, ReleaseFast)
 

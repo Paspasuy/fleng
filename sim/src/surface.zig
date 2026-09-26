@@ -118,6 +118,111 @@ pub fn labelCells(grid: *Grid) void {
     }
 }
 
+/// Rebuilds a true signed distance from a level set that is only accurate
+/// next to the surface (lesson 7, §7.4): Zhu–Bridson gives about -r deep
+/// inside the water, which would make rays crawl through it.
+///
+/// 1. Cells with a neighbor of the opposite sign locate the surface. Their
+///    distance is rebuilt from where φ changes sign: Zhu–Bridson's φ changes
+///    only ~0.6 per unit of distance across the surface, and a renderer that
+///    trusts it as a distance steps too little and misjudges how deep a point is.
+/// 2. Every other cell gets the distance through them from fast sweeping
+///    (Zhao 2005), which solves |∇φ| = 1 with upwind differences in 8 sweep
+///    directions.
+/// `phi` and `out` have the grid's cell layout; `out` may not alias `phi`.
+pub fn redistance(grid: Grid, phi: []const f32, out: []f32) void {
+    const n = grid.n;
+    const h = grid.dx;
+    const far = std.math.floatMax(f32);
+    // Work on |φ|, with the band next to the surface fixed.
+    for (0..n[2]) |k| for (0..n[1]) |j| for (0..n[0]) |i| {
+        const c = grid.cellIndex(i, j, k);
+        out[c] = if (nextToSurface(grid, phi, i, j, k)) surfaceDistance(grid, phi, i, j, k) else far;
+    };
+    for (0..2) |_| {
+        for (0..8) |dir| {
+            for (0..n[2]) |kk| for (0..n[1]) |jj| for (0..n[0]) |ii| {
+                const i = if (dir & 1 == 0) ii else n[0] - 1 - ii;
+                const j = if (dir & 2 == 0) jj else n[1] - 1 - jj;
+                const k = if (dir & 4 == 0) kk else n[2] - 1 - kk;
+                const c = grid.cellIndex(i, j, k);
+                if (nextToSurface(grid, phi, i, j, k)) continue;
+                // Smallest neighbor distance along each axis, sorted a ≤ b ≤ c.
+                var m = [3]f32{
+                    axisMin(out, c, i, n[0], 1),
+                    axisMin(out, c, j, n[1], n[0]),
+                    axisMin(out, c, k, n[2], n[0] * n[1]),
+                };
+                std.mem.sort(f32, &m, {}, std.sort.asc(f32));
+                if (m[0] == far) continue;
+                // Largest d with Σ max(d - m_i, 0)² = h², using as few axes as possible.
+                var d = m[0] + h;
+                if (d > m[1]) {
+                    d = 0.5 * (m[0] + m[1] + @sqrt(@max(2 * h * h - (m[0] - m[1]) * (m[0] - m[1]), 0)));
+                    if (d > m[2]) {
+                        const s = m[0] + m[1] + m[2];
+                        const q = m[0] * m[0] + m[1] * m[1] + m[2] * m[2] - h * h;
+                        d = (s + @sqrt(@max(s * s - 3 * q, 0))) / 3;
+                    }
+                }
+                out[c] = @min(out[c], d);
+            };
+        }
+    }
+    for (out, phi) |*o, p| {
+        if (p < 0) o.* = -o.*;
+    }
+}
+
+/// Distance from a cell next to the surface to the surface. Along each axis,
+/// linear interpolation toward the neighbor closer to the surface puts the
+/// crossing a fraction θ of a cell away (θ > 1 means beyond the neighbor, on
+/// axes without a sign change); for a locally flat surface the perpendicular
+/// distance d satisfies 1/d² = Σ 1/θ². Only ratios of φ are used, so it doesn't
+/// matter how φ is scaled, and only neighbors nearer the surface, where
+/// Zhu–Bridson's values are trustworthy.
+fn surfaceDistance(grid: Grid, phi: []const f32, i: usize, j: usize, k: usize) f32 {
+    const c = grid.cellIndex(i, j, k);
+    const cell = [3]usize{ i, j, k };
+    const stride = [3]usize{ 1, grid.n[0], grid.n[0] * grid.n[1] };
+    var inv2: f32 = 0;
+    for (0..3) |a| {
+        var theta = std.math.floatMax(f32);
+        for ([2]bool{ false, true }) |up| {
+            if (!up and cell[a] == 0) continue;
+            if (up and cell[a] + 1 >= grid.n[a]) continue;
+            const nb = if (up) c + stride[a] else c - stride[a];
+            // Positive only if |φ| shrinks (or changes sign) toward the neighbor.
+            const t = phi[c] / (phi[c] - phi[nb]);
+            if (t > 0) theta = @min(theta, t);
+        }
+        if (theta < std.math.floatMax(f32)) {
+            const t = @max(theta, 1e-3);
+            inv2 += 1 / (t * t);
+        }
+    }
+    return grid.dx / @sqrt(inv2);
+}
+
+fn nextToSurface(grid: Grid, phi: []const f32, i: usize, j: usize, k: usize) bool {
+    const c = grid.cellIndex(i, j, k);
+    const inside = phi[c] < 0;
+    const cell = [3]usize{ i, j, k };
+    const stride = [3]usize{ 1, grid.n[0], grid.n[0] * grid.n[1] };
+    for (0..3) |a| {
+        if (cell[a] > 0 and (phi[c - stride[a]] < 0) != inside) return true;
+        if (cell[a] + 1 < grid.n[a] and (phi[c + stride[a]] < 0) != inside) return true;
+    }
+    return false;
+}
+
+inline fn axisMin(u: []const f32, c: usize, coord: usize, len: usize, stride: usize) f32 {
+    var m = std.math.floatMax(f32);
+    if (coord > 0) m = @min(m, u[c - stride]);
+    if (coord + 1 < len) m = @min(m, u[c + stride]);
+    return m;
+}
+
 // ---------------------------------------------------------------------------
 
 const testing = std.testing;
@@ -188,4 +293,64 @@ test "sphere: the surface radius matches the seeded radius" {
         }
     }
     return error.NoSurface;
+}
+
+test "redistancing recovers true distances deep inside and far outside" {
+    const gpa = testing.allocator;
+    var g = try Grid.init(gpa, .{ 32, 32, 32 }, 1);
+    defer g.deinit(gpa);
+    const exact = try gpa.alloc(f32, g.cellCount());
+    defer gpa.free(exact);
+    const out = try gpa.alloc(f32, g.cellCount());
+    defer gpa.free(out);
+    // A sphere of radius 9; mimic Zhu–Bridson: accurate near the surface,
+    // flattening out at -0.42 inside and clamped to 1.5 outside.
+    for (0..32) |k| for (0..32) |j| for (0..32) |i| {
+        const x = g.cellCenter(i, j, k);
+        const d = @sqrt((x[0] - 16) * (x[0] - 16) + (x[1] - 16) * (x[1] - 16) + (x[2] - 16) * (x[2] - 16)) - 9;
+        const c = g.cellIndex(i, j, k);
+        exact[c] = d;
+        g.phi[c] = std.math.clamp(d, -0.42, 1.5);
+    };
+    redistance(g, g.phi, out);
+    // Fast sweeping is first-order: measured here, it's within 10% of the true
+    // distance and overestimates by at most ~8%. The renderer steps 0.9× the
+    // distance so an overestimate can't carry a ray through the surface.
+    var rel: f32 = 0;
+    var rel_over: f32 = 0;
+    for (exact, out) |e, o| {
+        if (@abs(e) <= 1) continue;
+        rel = @max(rel, @abs(o - e) / @abs(e));
+        rel_over = @max(rel_over, (@abs(o) - @abs(e)) / @abs(e));
+    }
+    try testing.expect(rel < 0.12);
+    // The renderer marches 0.9× the distance, which absorbs up to 1/0.9 - 1 ≈ 11%.
+    try testing.expect(rel_over < 0.1);
+    // The cell at the center is 8.13 cells deep; Zhu–Bridson alone would say 0.42.
+    const center = g.cellIndex(16, 16, 16);
+    try testing.expect(out[center] < -7);
+}
+
+test "redistancing turns a squashed field into distances near the surface too" {
+    const gpa = testing.allocator;
+    var g = try Grid.init(gpa, .{ 32, 32, 32 }, 1);
+    defer g.deinit(gpa);
+    const out = try gpa.alloc(f32, g.cellCount());
+    defer gpa.free(out);
+    // Like Zhu–Bridson near the surface: the right zero set, but φ changing
+    // only 0.6 per unit of distance.
+    for (0..32) |k| for (0..32) |j| for (0..32) |i| {
+        const x = g.cellCenter(i, j, k);
+        const d = @sqrt((x[0] - 16) * (x[0] - 16) + (x[1] - 16) * (x[1] - 16) + (x[2] - 16) * (x[2] - 16)) - 9;
+        g.phi[g.cellIndex(i, j, k)] = 0.6 * d;
+    };
+    redistance(g, g.phi, out);
+    var worst: f32 = 0;
+    for (0..32) |k| for (0..32) |j| for (0..32) |i| {
+        const x = g.cellCenter(i, j, k);
+        const d = @sqrt((x[0] - 16) * (x[0] - 16) + (x[1] - 16) * (x[1] - 16) + (x[2] - 16) * (x[2] - 16)) - 9;
+        if (@abs(d) < 2) worst = @max(worst, @abs(out[g.cellIndex(i, j, k)] - d));
+    };
+    // Within 2 cells of the surface the result is a real distance (0.6× before).
+    try testing.expect(worst < 0.15);
 }

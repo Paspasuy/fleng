@@ -15,11 +15,33 @@
 #include "camera.hpp"
 #include <cassert>
 #include "objects/objects.hpp"
+#include "water.hpp"
 
 // #include <GL/glew.h>
 
+// Saves what's on screen (the accumulated image) as PNG.
+static bool saveScreenshot(const sf::RenderTexture& image, const std::string& path) {
+  const bool ok = image.getTexture().copyToImage().saveToFile(path);
+  std::cout << (ok ? "saved " : "could not save ") << path << std::endl;
+  return ok;
+}
+
 signed main(int argc, char** argv) {
-  if (!load_config(argc > 1 ? argv[1] : "fleng.toml", config)) {
+  // fleng [config.toml] [--screenshot PATH SECONDS]
+  std::string config_path = "fleng.toml";
+  std::string screenshot_path;
+  float screenshot_after = 0;
+  for (int i = 1; i < argc; ++i) {
+    const std::string arg = argv[i];
+    if (arg == "--screenshot" && i + 2 < argc) {
+      screenshot_path = argv[i + 1];
+      screenshot_after = std::stof(argv[i + 2]);
+      i += 2;
+    } else {
+      config_path = arg;
+    }
+  }
+  if (!load_config(config_path, config)) {
     return -1;
   }
   const sf::Vector2u viewport(config.window_width, config.window_height);
@@ -66,6 +88,17 @@ signed main(int argc, char** argv) {
 
   sf::Sprite current(currentRT.getTexture());
   sf::Sprite prev(accumRT.getTexture());
+
+  // Simulated water (docs/water-plan.md): runs on its own thread; the shader
+  // reads its surface from a 3D texture on a fixed texture unit.
+  Water water;
+  shader.setUniform("water_on", 0);
+  if (config.water_enabled) {
+    water.start();
+    sf::Shader::bind(&shader);
+    glUniform1i(glGetUniformLocation(shader.getNativeHandle(), "water_phi"), Water::texture_unit);
+    sf::Shader::bind(nullptr);
+  }
   //fullscreen.setTexture(currentRT.getTexture());
 
 
@@ -145,6 +178,14 @@ signed main(int argc, char** argv) {
           cam.speed *= 10;
         if (keyPressed->scancode == sf::Keyboard::Scancode::Num7) {
         }
+        if (keyPressed->scancode == sf::Keyboard::Scancode::F12) {
+          static int shot = 0;
+          saveScreenshot(accumRT, "screenshot_" + std::to_string(++shot) + ".png");
+        }
+        if (keyPressed->scancode == sf::Keyboard::Scancode::R)
+          water.reset();
+        if (keyPressed->scancode == sf::Keyboard::Scancode::T)
+          water.togglePause();
         if (keyPressed->scancode == sf::Keyboard::Scancode::P) {
           blur ^= 1;
         }
@@ -224,12 +265,22 @@ signed main(int argc, char** argv) {
 
 //    shader.setUniform("image2", *player_texture);
 //    shader.setUniform("image2_o", 11);
-    shader.setUniform("video", *player_texture);
+    if (player_texture) shader.setUniform("video", *player_texture);
     shader.setUniform("video_o", 11);
      // GLfloat ut = glGetUniformLocation(ProgramObject, "u_time");
     // if (ut != -1)
     // glUniform1f(ut, clock() / CLOCKS_PER_SEC);
 //    window.clear(sf::Color::Black);
+
+    if (config.water_enabled) {
+      // Texture uploads and bindings belong to the context that draws the shader.
+      (void)currentRT.setActive(true);
+      if (water.upload()) {
+        water.setUniforms(shader);
+        stale = 0;  // the water moved: restart image accumulation
+      }
+      if (water.ready()) water.bind();
+    }
 
     currentRT.clear(sf::Color::Black);
     currentRT.draw(current, &shader);
@@ -248,11 +299,18 @@ signed main(int argc, char** argv) {
     if (fps_clock.getElapsedTime().asSeconds() > 0.5) {
       float currentTime = fps_clock.getElapsedTime().asSeconds();
       float fps = frames / currentTime;
-      std::cout << "fps: " << fps << std::endl;
+      std::cout << "fps: " << fps;
+      if (config.water_enabled) std::cout << "  |  " << water.status();
+      std::cout << std::endl;
       frames = 0;
       fps_clock.restart();
     }
     window.display();
+
+    if (!screenshot_path.empty() && cl.getElapsedTime().asSeconds() >= screenshot_after) {
+      saveScreenshot(accumRT, screenshot_path);
+      window.close();
+    }
   }
   for (RenderObject* object : obj) {
     delete object;

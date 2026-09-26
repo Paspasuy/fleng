@@ -9,8 +9,19 @@ CFLAGS += -I$(BREW_PREFIX)/include
 LIBS += -L$(BREW_PREFIX)/lib
 endif
 
+# Water simulation core (Zig, sim/), linked as a static library.
+SIMLIB = sim/zig-out/lib/libfleng_sim.a
+SIMSRCS = $(wildcard sim/src/*.zig) sim/build.zig
+
+ifeq ($(shell uname),Darwin)
+CFLAGS += -DGL_SILENCE_DEPRECATION
+LIBS += -framework OpenGL
+else
+LIBS += -lGL
+endif
+
 SRCS = src/fleng.cpp src/math.cpp
-HEADERS = src/utils/*.hpp src/*.cpp src/*.hpp src/objects/*.hpp
+HEADERS = src/utils/*.hpp src/*.cpp src/*.hpp src/objects/*.hpp sim/include/*.h
 
 OBJS = $(SRCS:.cpp=.o)
 EXE  = fleng
@@ -31,8 +42,8 @@ all: release run
 
 debug: $(DBGEXE)
 
-$(DBGEXE): $(DBGOBJS)
-	$(CC) $(CFLAGS) $(DBGCFLAGS) $(LIBS) -o $(DBGEXE) $^
+$(DBGEXE): $(DBGOBJS) $(SIMLIB)
+	$(CC) $(CFLAGS) $(DBGCFLAGS) -o $(DBGEXE) $^ $(LIBS)
 
 $(DBGDIR)/%.o: %.cpp $(HEADERS)
 	@mkdir -p $(@D)
@@ -40,12 +51,27 @@ $(DBGDIR)/%.o: %.cpp $(HEADERS)
 
 release: $(RELEXE)
 
-$(RELEXE): $(RELOBJS)
-	$(CC) $(CFLAGS) $(RELCFLAGS) $(LIBS) -o $(RELEXE) $^
+$(RELEXE): $(RELOBJS) $(SIMLIB)
+	$(CC) $(CFLAGS) $(RELCFLAGS) -o $(RELEXE) $^ $(LIBS)
 
 $(RELDIR)/%.o: %.cpp $(HEADERS)
 	@mkdir -p $(@D)
 	$(CC) -c $(CFLAGS) $(RELCFLAGS) -o $@ $<
+
+ifeq ($(shell uname),Darwin)
+# Build for an older macOS than the host so the linker doesn't warn.
+ZIGTARGET = -Dtarget=native-macos.13.0 -Dcpu=native
+endif
+
+$(SIMLIB): $(SIMSRCS)
+	cd sim && zig build -Doptimize=ReleaseFast $(ZIGTARGET)
+ifeq ($(shell uname),Darwin)
+	@# Apple's linker needs 8-byte aligned archive members, which Zig's archiver
+	@# doesn't produce: unpack the archive and repack it with Apple's libtool.
+	rm -rf $(SIMLIB).d && mkdir $(SIMLIB).d
+	cd $(SIMLIB).d && ar x ../$(notdir $(SIMLIB)) && chmod 644 *.o && libtool -static -o ../$(notdir $(SIMLIB)) *.o
+	rm -rf $(SIMLIB).d
+endif
 
 run:
 	$(RELEXE)
