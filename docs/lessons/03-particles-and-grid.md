@@ -153,7 +153,7 @@ The grid now holds the exact field `v = x`. G2P gives back `v_1 = 0.75·0 + 0.25
   - **Coloring:** split space into blocks and process blocks that can't overlap in parallel, then the next color.
   - **Sort particles by cell, then gather:** each grid sample loops over particles in nearby cells. No writes conflict. This is also what makes the CUDA version fast.
 
-We'll start with the sorted-gather version: it's deterministic (same result every run), which makes debugging much easier.
+The code started with the sorted gather, which is deterministic (same result every run). Profiling showed each face sample rescanning 36 cells of particles, so it switched to a scatter made race-free by coloring: blocks of 4×4 grid rows run in 4 passes, and blocks running at the same time are too far apart to touch the same samples. The order of writes to each sample is still fixed, so it stays deterministic (`Particles.forEachBlockColored` in [sim/](../../sim/)).
 
 ## 3.7 Check yourself
 

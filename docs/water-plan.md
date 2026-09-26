@@ -5,7 +5,8 @@ Goals: as much physical correctness as possible, beautiful rendering, switchable
 Decisions so far:
 
 - **First solver:** APIC.
-- **Compute:** CPU first (multithreaded C++), CUDA later.
+- **Compute:** CPU first, CUDA later.
+- **Language:** the simulation core is written in Zig ([sim/](../sim/)); fleng itself stays C++.
 - **Pace:** algorithms first, one concept per step, code after (see [lessons/](lessons/)).
 
 ## Core idea: simulation time is separate from render time
@@ -73,7 +74,7 @@ Data is laid out as structure-of-arrays with kernel-shaped loops, so a CUDA port
 
 ## Milestones
 
-1. **Core:** 3D grid, APIC, MGPCG, box domain, dam-break and drop-into-pool scenes, validation tests, a headless command-line runner.
+1. **Core:** 3D grid, APIC, MGPCG, box domain, dam-break and drop-into-pool scenes, validation tests, a headless command-line runner. **Done:** see [sim/README.md](../sim/README.md) for results and where the code departs from the lessons.
 2. **Engine integration:** simulation thread and snapshots, surface SDF → 3D texture, water material in the shader. Live and slow modes.
 3. **Bake and playback:** cache format, timeline.
 4. **Playground UI:** ImGui, live parameters, term toggles, debug slices.

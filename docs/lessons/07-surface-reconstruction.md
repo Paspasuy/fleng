@@ -21,7 +21,7 @@ It's correct in the sense that it wraps the particles, but the surface is visibl
 
 ## 7.2 Zhu & Bridson: average first, then measure
 
-**Zhu & Bridson (2005)** smooth things out by blending nearby particles *before* measuring distance. Around each grid point `x`, within a search radius `R` (about 2 cell widths):
+**Zhu & Bridson (2005)** smooth things out by blending nearby particles *before* measuring distance. Around each grid point `x`, within a search radius `R` (1.5–2 cell widths; the code uses 1.5 with particle radius 0.42 cells, calibrated so a flat surface lands on the true water boundary):
 
 ```
 k(s)  = max(0, 1 − s²)³                       smooth weight, 1 at the center, 0 at distance R

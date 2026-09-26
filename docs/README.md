@@ -9,6 +9,7 @@ Background reading and plans, mostly around adding physics-based water to the en
 | [water-simulation-overview.md](water-simulation-overview.md) | Simulating water: Navier–Stokes, grid / particle / hybrid / Lattice Boltzmann methods, high-performance techniques |
 | [water-plan.md](water-plan.md) | Architecture and milestones for water in fleng |
 | [lessons/](lessons/) | Step-by-step lessons for milestone 1 (APIC solver), one concept per lesson |
+| [../sim/](../sim/) | The milestone 1 code (Zig): solver, validation, headless runner |
 
 ## Lessons
 

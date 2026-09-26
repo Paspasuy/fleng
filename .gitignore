@@ -1,3 +1,5 @@
 build/
 assets/video.mp4
 #assets/
+sim/zig-out/
+sim/.zig-cache/
